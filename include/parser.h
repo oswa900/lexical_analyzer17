@@ -3,6 +3,7 @@
 
 #include "token.h"
 #include "list.h"
+#include "error.h"
 
 typedef enum NodeType {
     NODE_PROGRAM,
@@ -34,10 +35,12 @@ typedef struct ASTNode {
 } ASTNode;
 
 typedef struct Parser {
-    Token* current;
+    Token*      current;
+    ErrorStack* errors;
+    int         paren_depth;
 } Parser;
 
-Parser* parser_init(List* token_list);
+Parser* parser_init(List* token_list, ErrorStack* errors);
 
 void    parser_free(Parser* p);
 

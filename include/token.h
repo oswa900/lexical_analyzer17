@@ -2,13 +2,14 @@
 #define TOKEN_H
 
 typedef enum Token_type{
-	IDENTIFIER = 1, 
-	KEYWORD = 2, 
-	NUMBER = 3, 
-	OPERATION = 4, 
+	IDENTIFIER = 1,
+	KEYWORD = 2,
+	NUMBER = 3,
+	OPERATION = 4,
 	STRING = 5,
 	SYMBOLS = 6,
-	UNKNOWN = -1 
+	RUTA = 7,
+	UNKNOWN = -1
 }Token_type;
 
 typedef struct Token{

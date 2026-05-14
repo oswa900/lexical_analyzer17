@@ -3,6 +3,7 @@
 #include <string.h>
 #include "../include/parser.h"
 #include "../include/list.h"
+#include "../include/dfa.h"
 
 static ASTNode* make_node(NodeType type) {
     ASTNode* n = calloc(1, sizeof(ASTNode));
@@ -27,13 +28,8 @@ static Token_type current_type(Parser* p) {
 }
 
 static int expect_keyword(Parser* p, const char* kw) {
-    if (!p->current) {
-        fprintf(stderr, "[parser] error: se esperaba keyword '%s' pero llegamos al final\n", kw);
-        return 0;
-    }
-    if (p->current->type != KEYWORD || strcmp(p->current->lexeme, kw) != 0) {
-        fprintf(stderr, "[parser] error: se esperaba keyword '%s', se encontro '%s'\n",
-                kw, p->current->lexeme ? p->current->lexeme : "(null)");
+    if (!p->current || p->current->type != KEYWORD
+        || strcmp(p->current->lexeme, kw) != 0) {
         return 0;
     }
     advance(p);
@@ -41,13 +37,8 @@ static int expect_keyword(Parser* p, const char* kw) {
 }
 
 static int expect_operation(Parser* p, const char* op) {
-    if (!p->current) {
-        fprintf(stderr, "[parser] error: se esperaba operacion '%s' pero llegamos al final\n", op);
-        return 0;
-    }
-    if (p->current->type != OPERATION || strcmp(p->current->lexeme, op) != 0) {
-        fprintf(stderr, "[parser] error: se esperaba operacion '%s', se encontro '%s'\n",
-                op, p->current->lexeme ? p->current->lexeme : "(null)");
+    if (!p->current || p->current->type != OPERATION
+        || strcmp(p->current->lexeme, op) != 0) {
         return 0;
     }
     advance(p);
@@ -67,10 +58,7 @@ static ASTNode* parse_factor(Parser* p);
 //PROGRAM -> STATEMENT+
 
 ASTNode* parse_program(Parser* p) {
-    if (!p->current) {
-        fprintf(stderr, "[parser] error: lista de tokens vacia\n");
-        return NULL;
-    }
+    if (!p->current) return NULL;
 
     ASTNode* program = make_node(NODE_PROGRAM);
     ASTNode* tail = NULL;
@@ -90,11 +78,6 @@ ASTNode* parse_program(Parser* p) {
         }
     }
 
-    if (!program->left) {
-        fprintf(stderr, "[parser] error: el programa debe tener al menos una sentencia\n");
-        ast_free(program);
-        return NULL;
-    }
     return program;
 }
 
@@ -179,8 +162,6 @@ static ASTNode* parse_condition(Parser* p) {
     if (!p->current || p->current->type != OPERATION
         || (strcmp(p->current->lexeme, "<") != 0
            && strcmp(p->current->lexeme, ">") != 0)) {
-        fprintf(stderr, "[parser] error: se esperaba '<' o '>' en la condicion, se encontro '%s'\n",
-                p->current ? p->current->lexeme : "(fin)");
         ast_free(node);
         return NULL;
     }
@@ -248,13 +229,12 @@ static ASTNode* parse_term(Parser* p) {
  /*         | "(" EXPRESSION ")" */
 
 static ASTNode* parse_factor(Parser* p) {
-    if (!p->current) {
-        fprintf(stderr, "[parser] error: se esperaba un factor pero llegamos al final\n");
-        return NULL;
-    }
+    if (!p->current) return NULL;
 
-    /* IDENTIFIER */
+    /* IDENTIFIER — E-SIN-01: funcion de shell usada sin parentesis de apertura */
     if (current_type(p) == IDENTIFIER) {
+        if (p->paren_depth == 0 && is_valid_function(p->current->lexeme))
+            error_push(p->errors, E_SIN_01, p->current->lexeme);
         ASTNode* n = make_node(NODE_FACTOR_ID);
         n->value = strdup(p->current->lexeme);
         advance(p);
@@ -269,9 +249,17 @@ static ASTNode* parse_factor(Parser* p) {
         return n;
     }
 
-    /* STRING  (el lexer guarda la cadena con comillas incluidas)  */
+    /* STRING */
     if (current_type(p) == STRING) {
         ASTNode* n = make_node(NODE_FACTOR_STRING);
+        n->value = strdup(p->current->lexeme);
+        advance(p);
+        return n;
+    }
+
+    /* RUTA */
+    if (current_type(p) == RUTA) {
+        ASTNode* n = make_node(NODE_FACTOR_ID);
         n->value = strdup(p->current->lexeme);
         advance(p);
         return n;
@@ -280,34 +268,35 @@ static ASTNode* parse_factor(Parser* p) {
     /* "(" EXPRESSION ")" */
     if (current_type(p) == SYMBOLS && p->current->lexeme
         && strcmp(p->current->lexeme, "(") == 0) {
-        advance(p); /* consume '(' */
+        p->paren_depth++;
+        advance(p);
 
         ASTNode* inner = parse_expression(p);
-        if (!inner) return NULL;
+        if (!inner) { p->paren_depth--; return NULL; }
 
         if (!p->current || strcmp(p->current->lexeme, ")") != 0) {
-            fprintf(stderr, "[parser] error: se esperaba ')'\n");
             ast_free(inner);
+            p->paren_depth--;
             return NULL;
         }
         advance(p);
+        p->paren_depth--;
 
         ASTNode* n = make_node(NODE_FACTOR_EXPR);
         n->left = inner;
         return n;
     }
 
-    fprintf(stderr, "[parser] error: token inesperado '%s' (tipo %d) en factor\n",
-            p->current->lexeme ? p->current->lexeme : "(null)",
-            (int)p->current->type);
     return NULL;
 }
 
-Parser* parser_init(List* token_list) {
+Parser* parser_init(List* token_list, ErrorStack* errors) {
     if (!token_list) return NULL;
     Parser* p = malloc(sizeof(Parser));
     if (!p) return NULL;
-    p->current = token_list->head;
+    p->current     = token_list->head;
+    p->errors      = errors;
+    p->paren_depth = 0;
     return p;
 }
 

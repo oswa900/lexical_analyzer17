@@ -1,0 +1,4 @@
+mkdir "docs"
+ls @datos
+ls ./arc?hivo
+touch 'sinCerrar
