@@ -1,3 +1,27 @@
 x = 10
-if x < 11 then x + 10
-echo x
+y = 20
+z = x + y
+
+a = 2
+b = 3
+c = a * b + 4
+d = c - a * 2
+
+if x < y then z = x + 1 else z = y - 1
+
+if z < 8 then w = z * 2
+
+nombre = 'archivo.txt'
+ruta = /home/user/docs
+
+if a < b then resultado = a * 4 else resultado = b + 10
+
+total = resultado + z + w
+
+if total < 100 then final = total + 1 else final = total - 1
+
+ls /home/user/docs
+mkdir ./nueva_carpeta
+touch ./nueva_carpeta/archivo.txt
+rm /home/user/docs/viejo.txt
+echo 'hola mundo'

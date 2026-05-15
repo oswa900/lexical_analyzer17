@@ -7,7 +7,7 @@
 #include "../include/error.h"
 
 static const char* keywords[] = {
-    "if", "while", "for", "else", "then"
+    "if", "while", "for", "else", "then", "do", "to"
 };
 
 static const char* commands[] = {
@@ -30,9 +30,13 @@ int is_valid_function(const char* str) {
     return 0;
 }
 
-static int is_operation(char c) {
+/* Retorna 1 solo para operadores de UN caracter que pueden aparecer solos
+   o como primer caracter de un operador de dos caracteres.
+   '&' y '|' se excluyen aqui porque solo son validos como '&&' y '||'. */
+static int is_operation_char(char c) {
     return c == '+' || c == '-' || c == '*' || c == '/'
-        || c == '=' || c == '<' || c == '>';
+        || c == '=' || c == '<' || c == '>' || c == '!'
+        || c == '&' || c == '|';
 }
 
 static int is_paren(char c) {
@@ -91,14 +95,31 @@ static Token* get_next_token(const char* input) {
         return t;
     }
 
-    if (is_operation(*str)) {
-        if (*(str + 1) != '\0') {
+    /* Operadores: 1 o 2 caracteres.
+       get_next_token recibe ya el string recortado, entonces
+       simplemente verifica que NO haya caracteres extra despues. */
+    if (is_operation_char(*str)) {
+        size_t len = strlen(str);
+        /* operadores validos de 2 caracteres */
+        if (len == 2 &&
+            (strcmp(str, "<=") == 0 || strcmp(str, ">=") == 0 ||
+             strcmp(str, "==") == 0 || strcmp(str, "!=") == 0 ||
+             strcmp(str, "&&") == 0 || strcmp(str, "||") == 0)) {
             t->lexeme = strdup(str);
-            t->type   = UNKNOWN;
+            t->type   = OPERATION;
             return t;
         }
+        /* operadores validos de 1 caracter (excluye & y | solos) */
+        if (len == 1 &&
+            (*str == '+' || *str == '-' || *str == '*' || *str == '/' ||
+             *str == '=' || *str == '<' || *str == '>')) {
+            t->lexeme = strdup(str);
+            t->type   = OPERATION;
+            return t;
+        }
+        /* cualquier otra combinacion es desconocida */
         t->lexeme = strdup(str);
-        t->type   = OPERATION;
+        t->type   = UNKNOWN;
         return t;
     }
 
@@ -126,9 +147,6 @@ static Token* get_next_token(const char* input) {
     return t;
 }
 
-/* flush_buffer: tokenize whatever is in buffer and push it to the list.
-   UNKNOWN tokens that don't start with ' (already handled as E-LEX-02)
-   are reported as E-LEX-04. */
 static void flush_buffer(List* l, char* buffer, int* i, ErrorStack* errors) {
     if (*i == 0) return;
     buffer[*i] = '\0';
@@ -156,14 +174,14 @@ List* tokenize(const char* input, ErrorStack* errors) {
 
     while (*str) {
 
-        /* whitespace — flush accumulated word */
+        /* whitespace */
         if (*str == ' ' || *str == '\n') {
             flush_buffer(l, buffer, &i, errors);
             str++;
             continue;
         }
 
-        /* E-LEX-02: double-quoted string (should use single quotes) */
+        /* E-LEX-02: double-quoted string */
         if (*str == '"') {
             flush_buffer(l, buffer, &i, errors);
             buffer[i++] = *str++;
@@ -172,14 +190,14 @@ List* tokenize(const char* input, ErrorStack* errors) {
             if (*str == '"') buffer[i++] = *str++;
             buffer[i] = '\0';
             error_push(errors, E_LEX_02, buffer);
-            Token* t = get_next_token("?");   /* placeholder UNKNOWN token */
+            Token* t = get_next_token("?");
             if (t) { free(t->lexeme); t->lexeme = strdup(buffer); push_token(l, t); }
             memset(buffer, 0, i + 1);
             i = 0;
             continue;
         }
 
-        /* RUTA: absolute path (/…) or relative path (./… or ../…) */
+        /* RUTA */
         if (is_path_start(str)) {
             flush_buffer(l, buffer, &i, errors);
             int has_invalid = 0;
@@ -212,17 +230,26 @@ List* tokenize(const char* input, ErrorStack* errors) {
             continue;
         }
 
-        /* operators */
-        if (is_operation(*str)) {
+        /* operadores: detectar primero si son de 2 caracteres */
+        if (is_operation_char(*str)) {
             flush_buffer(l, buffer, &i, errors);
-            char op[2] = { *str, '\0' };
+            char op[3] = { '\0', '\0', '\0' };
+
+            if (((*str == '<' || *str == '>' || *str == '=' || *str == '!') && *(str+1) == '=') ||
+                (*str == '&' && *(str+1) == '&') ||
+                (*str == '|' && *(str+1) == '|')) {
+                op[0] = *str++;
+                op[1] = *str++;
+            } else {
+                op[0] = *str++;
+            }
+
             Token* t = get_next_token(op);
             if (t) push_token(l, t);
-            str++;
             continue;
         }
 
-        /* single-quoted string; unclosed → E-LEX-02 */
+        /* single-quoted string */
         if (*str == '\'') {
             flush_buffer(l, buffer, &i, errors);
             buffer[i++] = *str++;
@@ -230,7 +257,7 @@ List* tokenize(const char* input, ErrorStack* errors) {
                 buffer[i++] = *str++;
             if (*str == '\'') {
                 buffer[i++] = *str++;
-                flush_buffer(l, buffer, &i, errors);   /* will be STRING */
+                flush_buffer(l, buffer, &i, errors);
             } else {
                 buffer[i] = '\0';
                 error_push(errors, E_LEX_02, buffer);

@@ -1,4 +1,13 @@
-mkdir "docs"
-ls @datos
-ls ./arc?hivo
-touch 'sinCerrar
+x = 10
+y = "comillas dobles"
+
+z = x + fantasma
+
+if x < limite then z = 1
+
+path = /home/user/docs con$simbolo
+
+echo x
+ls /home
+
+w = z + 1

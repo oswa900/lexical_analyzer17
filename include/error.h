@@ -7,6 +7,7 @@ typedef enum ErrorCode {
     E_LEX_03 = 103,
     E_LEX_04 = 104,
     E_SIN_01 = 201,
+    E_SEM_01  = 500
 } ErrorCode;
 
 typedef struct Error {

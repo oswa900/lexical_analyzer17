@@ -17,21 +17,20 @@ typedef enum NodeType {
     NODE_FACTOR_STRING,
     NODE_FACTOR_EXPR,
     NODE_BINOP,
+    NODE_WHILE_STATEMENT,
+    NODE_FOR_STATEMENT,
+    NODE_LOGICAL
 } NodeType;
 
 typedef struct ASTNode {
-    NodeType type;
-
-    char* value;
-
-    struct ASTNode* left;
-    struct ASTNode* right;
-
-    struct ASTNode* condition;
-    struct ASTNode* then_branch;
-    struct ASTNode* else_branch;
-
-    struct ASTNode* next;
+    NodeType         type;
+    char*            value;
+    struct ASTNode*  left;
+    struct ASTNode*  right;
+    struct ASTNode*  condition;    // usado por IF y WHILE
+    struct ASTNode*  then_branch;  // usado por IF, WHILE y FOR
+    struct ASTNode*  else_branch;  // usado por IF
+    struct ASTNode*  next;
 } ASTNode;
 
 typedef struct Parser {

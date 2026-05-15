@@ -6,6 +6,7 @@
 #include "include/token.h"
 #include "include/parser.h"
 #include "include/error.h"
+#include "include/semantic.h"
 
 char* get_content(FILE* file);
 
@@ -22,18 +23,44 @@ int main(int argc, char **argv) {
         fclose(file);
         raw = heap_buf;
     } else {
-        raw = "x = (20 + 20) / (20 + 20 / 7)";
+        raw = "x = 10\nif x < 11 then x + 10\necho x\n";
     }
 
-    List*    tokens = tokenize(raw, errors);
-    Parser*  p      = parser_init(tokens, errors);
-    ASTNode* ast    = parse_program(p);
+    /* ── análisis léxico ── */
+    List* tokens = tokenize(raw, errors);
 
-    if (ast) ast_print(ast, 0);
+    /* ── análisis sintáctico ── */
+    Parser*  p   = parser_init(tokens, errors);
+    ASTNode* ast = parse_program(p);
 
+    /* ── imprimir AST ── */
+    if (ast) {
+        printf("=== AST ===\n");
+        ast_print(ast, 0);
+        printf("\n");
+    } else {
+        printf("[!] El parser no produjo un AST valido.\n\n");
+    }
+
+    /* ── análisis semántico ── */
+    if (ast) {
+        SemanticAnalyzer* sa = semantic_init(errors);
+        if (sa) {
+            semantic_analyze(sa, ast);
+            printf("=== Tabla de simbolos ===\n");
+            sym_table_print(sa->symbols);
+            printf("\n");
+            semantic_free(sa);
+        }
+    }
+
+    /* ── reporte de errores ── */
+    error_stack_print(errors);
+
+    /* ── limpieza ── */
     ast_free(ast);
     parser_free(p);
-    error_stack_print(errors);
+    destoy_list(&tokens);
     error_stack_free(errors);
     free(heap_buf);
 
