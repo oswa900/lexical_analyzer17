@@ -11,6 +11,8 @@ static void analyze_node(SemanticAnalyzer* sa, ASTNode* node);
 static void analyze_program(SemanticAnalyzer* sa, ASTNode* node);
 static void analyze_assignment(SemanticAnalyzer* sa, ASTNode* node);
 static void analyze_if(SemanticAnalyzer* sa, ASTNode* node);
+static void analyze_while(SemanticAnalyzer* sa, ASTNode* node);
+static void analyze_for(SemanticAnalyzer* sa, ASTNode* node);
 static void analyze_condition(SemanticAnalyzer* sa, ASTNode* node);
 static void analyze_binop(SemanticAnalyzer* sa, ASTNode* node);
 static void analyze_factor_id(SemanticAnalyzer* sa, ASTNode* node);
@@ -50,14 +52,18 @@ int semantic_analyze(SemanticAnalyzer* sa, ASTNode* program) {
 static void analyze_node(SemanticAnalyzer* sa, ASTNode* node) {
     if (!node) return;
     switch (node->type) {
-        case NODE_PROGRAM:       analyze_program(sa, node);    break;
-        case NODE_ASSIGNMENT:    analyze_assignment(sa, node); break;
-        case NODE_IF_STATEMENT:  analyze_if(sa, node);         break;
-        case NODE_CONDITION:     analyze_condition(sa, node);  break;
-        case NODE_BINOP:         analyze_binop(sa, node);      break;
-        case NODE_FACTOR_ID:     analyze_factor_id(sa, node);  break;
-        case NODE_FACTOR_EXPR:   analyze_node(sa, node->left); break;
-        /* NUMBER y STRING son literales — no hay nada que verificar */
+        case NODE_PROGRAM:         analyze_program(sa, node);    break;
+        case NODE_ASSIGNMENT:      analyze_assignment(sa, node); break;
+        case NODE_IF_STATEMENT:    analyze_if(sa, node);         break;
+        case NODE_WHILE_STATEMENT: analyze_while(sa, node);      break;
+        case NODE_FOR_STATEMENT:   analyze_for(sa, node);        break;
+        case NODE_CONDITION:       analyze_condition(sa, node);  break;
+        /* LOGICAL tiene la misma estructura que CONDITION (left/right) */
+        case NODE_LOGICAL:         analyze_condition(sa, node);  break;
+        case NODE_BINOP:           analyze_binop(sa, node);      break;
+        case NODE_FACTOR_ID:       analyze_factor_id(sa, node);  break;
+        case NODE_FACTOR_EXPR:     analyze_node(sa, node->left); break;
+        /* NUMBER y STRING son literales — no requieren verificacion */
         default: break;
     }
 }
@@ -83,12 +89,32 @@ static void analyze_assignment(SemanticAnalyzer* sa, ASTNode* node) {
         sym_table_insert(sa->symbols, node->value, SYM_VAR);
 }
 
-/* IF: analiza condición, rama then y rama else (si existe) */
+/* IF: analiza condicion, rama then y rama else (si existe) */
 static void analyze_if(SemanticAnalyzer* sa, ASTNode* node) {
     analyze_node(sa, node->condition);
     analyze_node(sa, node->then_branch);
     if (node->else_branch)
         analyze_node(sa, node->else_branch);
+}
+
+/* WHILE: analiza condicion y cuerpo */
+static void analyze_while(SemanticAnalyzer* sa, ASTNode* node) {
+    analyze_node(sa, node->condition);
+    analyze_node(sa, node->then_branch);
+}
+
+/* FOR: registra la variable de iteracion como definida ANTES de analizar
+   el cuerpo, para que "for i = 1 to 5 do ... i ..." no genere E-SEM-01. */
+static void analyze_for(SemanticAnalyzer* sa, ASTNode* node) {
+    /* expresion inicial — puede referenciar variables ya definidas */
+    analyze_node(sa, node->left);
+    /* la variable de iteracion queda definida por el for */
+    if (node->value)
+        sym_table_insert(sa->symbols, node->value, SYM_VAR);
+    /* expresion limite */
+    analyze_node(sa, node->right);
+    /* cuerpo */
+    analyze_node(sa, node->then_branch);
 }
 
 /* CONDITION: analiza los dos operandos */
