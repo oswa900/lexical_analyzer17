@@ -1,0 +1,4 @@
+n = 10
+resultado = 1
+for i = 1 to n do resultado = resultado * i
+echo resultado

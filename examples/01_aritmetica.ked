@@ -1,0 +1,18 @@
+a = 10
+b = 3
+
+suma = a + b
+resta = a - b
+producto = a * b
+division = a / b
+
+echo suma
+echo resta
+echo producto
+echo division
+
+negativo = -a
+echo negativo
+
+expresion = -a + b * 2
+echo expresion

@@ -48,7 +48,9 @@ static int is_valid_path_char(char c) {
 }
 
 static int is_path_start(const char* s) {
-    if (*s == '/') return 1;
+    /* "/" solo es ruta si le sigue un caracter de path (no espacio ni operador) */
+    if (*s == '/' && (isalnum((unsigned char)*(s+1)) || *(s+1) == '.' || *(s+1) == '~' || *(s+1) == '/'))
+        return 1;
     if (*s == '.' && *(s+1) == '/') return 1;
     if (*s == '.' && *(s+1) == '.' && *(s+2) == '/') return 1;
     return 0;
