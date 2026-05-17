@@ -7,11 +7,11 @@
 #include "../include/error.h"
 
 static const char* keywords[] = {
-    "if", "while", "for", "else", "then", "do", "to"
+    "if", "while", "for", "else", "then", "do", "to", "echo"
 };
 
 static const char* commands[] = {
-    "ls", "mkdir", "touch", "edit", "rm", "help", "clear", "vim", "echo"
+    "ls", "mkdir", "touch", "edit", "rm", "help", "clear", "vim"
 };
 
 static int is_keyword(const char* str) {

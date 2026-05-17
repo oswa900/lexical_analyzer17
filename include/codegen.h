@@ -28,6 +28,8 @@ typedef enum {
     TAC_NE,          /* result = arg1 != arg2    */
     TAC_AND,         /* result = arg1 && arg2    */
     TAC_OR,          /* result = arg1 || arg2    */
+    TAC_NEG,         /* result = -arg1           */
+    TAC_PRINT,       /* print arg1               */
     TAC_LABEL,       /* result:                  */
     TAC_GOTO,        /* goto result              */
     TAC_IFNOT_GOTO,  /* ifnot arg1 goto result   */

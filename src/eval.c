@@ -63,7 +63,17 @@ void env_free(Env* env) {
             e = next;
         }
     }
+    for (int i = 0; i < env->output_count; i++) free(env->output[i]);
+    free(env->output);
     free(env);
+}
+
+static void env_push_output(Env* env, const char* line) {
+    if (env->output_count >= env->output_cap) {
+        env->output_cap = env->output_cap ? env->output_cap * 2 : 8;
+        env->output = realloc(env->output, (size_t)env->output_cap * sizeof(char*));
+    }
+    env->output[env->output_count++] = strdup(line);
 }
 
 /* ── utilidades ───────────────────────────────────── */
@@ -75,7 +85,7 @@ int is_temp_name(const char* name) {
     return 1;
 }
 
-/* Elimina temporales del entorno (se llama al final de cada eval_run) */
+/* Elimina temporales y limpia el output al final de cada eval_run */
 static void env_purge_temps(Env* env) {
     for (int i = 0; i < ENV_BUCKETS; i++) {
         EnvEntry** pp = &env->buckets[i];
@@ -92,6 +102,9 @@ static void env_purge_temps(Env* env) {
             }
         }
     }
+    /* el output pertenece a esta ejecucion; se limpia para la siguiente */
+    for (int i = 0; i < env->output_count; i++) free(env->output[i]);
+    env->output_count = 0;
 }
 
 /* Convierte un string del TAC en un Value:
@@ -128,6 +141,10 @@ static int find_label(TACInstr** arr, int n, const char* label) {
 
 int eval_run(const TACList* tac, Env* env) {
     if (!tac || !tac->head || !env) return 0;
+
+    /* limpiar output de la iteracion anterior */
+    for (int i = 0; i < env->output_count; i++) free(env->output[i]);
+    env->output_count = 0;
 
     /* convertir lista enlazada a array para acceso por indice (saltos) */
     int n = 0;
@@ -217,6 +234,31 @@ int eval_run(const TACList* tac, Env* env) {
                 break;
             }
 
+            /* result = -arg1 */
+            case TAC_NEG: {
+                Value a = resolve(env, in->arg1);
+                Value r = {VAL_UNDEF, 0, NULL};
+                if (a.kind == VAL_INT) { r.kind = VAL_INT; r.ival = -a.ival; }
+                env_set(env, in->result, r);
+                pc++;
+                break;
+            }
+
+            /* print arg1 */
+            case TAC_PRINT: {
+                Value v = resolve(env, in->arg1);
+                char buf[512];
+                if (v.kind == VAL_INT)
+                    snprintf(buf, sizeof(buf), "%d", v.ival);
+                else if (v.kind == VAL_STR)
+                    snprintf(buf, sizeof(buf), "%s", v.sval ? v.sval : "");
+                else
+                    snprintf(buf, sizeof(buf), "(indefinido)");
+                env_push_output(env, buf);
+                pc++;
+                break;
+            }
+
             case TAC_LABEL:
                 pc++;
                 break;
@@ -243,6 +285,22 @@ int eval_run(const TACList* tac, Env* env) {
     }
 
     free(arr);
-    env_purge_temps(env);
+    /* los temporales se limpian aqui; el output lo limpiara el
+       siguiente eval_run (para que el TUI lo pueda leer entre tanto) */
+    for (int i = 0; i < ENV_BUCKETS; i++) {
+        EnvEntry** pp = &env->buckets[i];
+        while (*pp) {
+            if (is_temp_name((*pp)->name)) {
+                EnvEntry* dead = *pp;
+                *pp = dead->next;
+                free(dead->name);
+                if (dead->val.kind == VAL_STR) free(dead->val.sval);
+                free(dead);
+                env->count--;
+            } else {
+                pp = &(*pp)->next;
+            }
+        }
+    }
     return hit_limit;
 }

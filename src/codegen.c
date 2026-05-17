@@ -55,6 +55,14 @@ static char* gen_expr(TACList* tac, ASTNode* node) {
         case NODE_FACTOR_EXPR:
             return gen_expr(tac, node->left);
 
+        case NODE_UNARY_NEG: {
+            char* arg = gen_expr(tac, node->left);
+            char* t   = new_temp(tac);
+            emit(tac, TAC_NEG, t, arg, NULL);
+            free(arg);
+            return t;
+        }
+
         case NODE_BINOP: {
             char* l = gen_expr(tac, node->left);
             char* r = gen_expr(tac, node->right);
@@ -228,6 +236,14 @@ static void gen_stmt(TACList* tac, ASTNode* node) {
             break;
         }
 
+        /* echo expr */
+        case NODE_ECHO: {
+            char* val = gen_expr(tac, node->left);
+            emit(tac, TAC_PRINT, NULL, val, NULL);
+            free(val);
+            break;
+        }
+
         default:
             break;
     }
@@ -276,6 +292,12 @@ void tac_print(const TACList* tac) {
             case TAC_EQ:  case TAC_NE:  case TAC_AND: case TAC_OR:
                 printf("  %s = %s %s %s\n",
                        i->result, i->arg1, op_str(i->op), i->arg2);
+                break;
+            case TAC_NEG:
+                printf("  %s = -%s\n", i->result, i->arg1);
+                break;
+            case TAC_PRINT:
+                printf("  print %s\n", i->arg1);
                 break;
             case TAC_LABEL:
                 printf("%s:\n", i->result);

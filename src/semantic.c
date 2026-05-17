@@ -63,6 +63,8 @@ static void analyze_node(SemanticAnalyzer* sa, ASTNode* node) {
         case NODE_BINOP:           analyze_binop(sa, node);      break;
         case NODE_FACTOR_ID:       analyze_factor_id(sa, node);  break;
         case NODE_FACTOR_EXPR:     analyze_node(sa, node->left); break;
+        case NODE_ECHO:            analyze_node(sa, node->left); break;
+        case NODE_UNARY_NEG:       analyze_node(sa, node->left); break;
         /* NUMBER y STRING son literales — no requieren verificacion */
         default: break;
     }

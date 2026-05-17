@@ -37,6 +37,10 @@ typedef struct EnvEntry {
 typedef struct Env {
     EnvEntry* buckets[ENV_BUCKETS];
     int       count;
+    /* lineas producidas por echo durante la ultima ejecucion */
+    char**    output;
+    int       output_count;
+    int       output_cap;
 } Env;
 
 Env*  env_init(void);

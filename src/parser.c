@@ -48,6 +48,7 @@ static ASTNode* parse_assignment(Parser* p);
 static ASTNode* parse_if_statement(Parser* p);
 static ASTNode* parse_while_statement(Parser* p);
 static ASTNode* parse_for_statement(Parser* p);
+static ASTNode* parse_echo(Parser* p);
 static ASTNode* parse_logical(Parser* p);
 static ASTNode* parse_condition(Parser* p);
 static ASTNode* parse_expression(Parser* p);
@@ -85,6 +86,8 @@ static ASTNode* parse_statement(Parser* p) {
         return parse_while_statement(p);
     if (current_type(p) == KEYWORD && strcmp(current_lexeme(p), "for")   == 0)
         return parse_for_statement(p);
+    if (current_type(p) == KEYWORD && strcmp(current_lexeme(p), "echo")  == 0)
+        return parse_echo(p);
 
     return parse_expression(p);
 }
@@ -185,6 +188,15 @@ static ASTNode* parse_for_statement(Parser* p) {
     return node;
 }
 
+// ECHO -> "echo" EXPRESSION
+static ASTNode* parse_echo(Parser* p) {
+    ASTNode* node = make_node(NODE_ECHO);
+    advance(p);  /* consume "echo" */
+    node->left = parse_expression(p);
+    if (!node->left) { ast_free(node); return NULL; }
+    return node;
+}
+
 // CONDITION -> EXPRESSION RELOP EXPRESSION
 // RELOP -> "<" | ">" | "<=" | ">=" | "==" | "!="
 static ASTNode* parse_condition(Parser* p) {
@@ -269,9 +281,18 @@ static ASTNode* parse_term(Parser* p) {
     return left;
 }
 
-// FACTOR -> IDENTIFIER | NUMBER | STRING | RUTA | "(" EXPRESSION ")"
+// FACTOR -> "-" FACTOR | IDENTIFIER | NUMBER | STRING | RUTA | "(" EXPRESSION ")"
 static ASTNode* parse_factor(Parser* p) {
     if (!p->current) return NULL;
+
+    /* negacion unaria */
+    if (current_type(p) == OPERATION && strcmp(p->current->lexeme, "-") == 0) {
+        advance(p);
+        ASTNode* n = make_node(NODE_UNARY_NEG);
+        n->left = parse_factor(p);
+        if (!n->left) { ast_free(n); return NULL; }
+        return n;
+    }
 
     if (current_type(p) == IDENTIFIER) {
         ASTNode* n = make_node(NODE_FACTOR_ID);
@@ -347,6 +368,8 @@ static const char* node_type_name(NodeType t) {
         case NODE_FACTOR_STRING:   return "STRING";
         case NODE_FACTOR_EXPR:     return "PAREN_EXPR";
         case NODE_BINOP:           return "BINOP";
+        case NODE_ECHO:            return "ECHO";
+        case NODE_UNARY_NEG:       return "NEG";
         default:                   return "UNKNOWN";
     }
 }
@@ -388,6 +411,8 @@ void ast_print(ASTNode* node, int indent) {
             ast_print(node->right, indent + 1);
             break;
         case NODE_FACTOR_EXPR:
+        case NODE_ECHO:
+        case NODE_UNARY_NEG:
             ast_print(node->left, indent + 1);
             break;
         default:

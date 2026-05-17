@@ -123,8 +123,18 @@ void tui_show_output(const Env* env, int hit_limit) {
     section_open("Resultado de ejecucion", GREEN);
     if (hit_limit)
         printf(YEL "  ! Limite de pasos alcanzado (posible bucle infinito)\n" RST);
+
+    /* output de sentencias echo */
+    if (env && env->output_count > 0) {
+        for (int i = 0; i < env->output_count; i++)
+            printf("  " GREEN "%s\n" RST, env->output[i]);
+        if (env->count > 0) printf("\n");
+    }
+
+    /* valores de variables de usuario */
     if (!env || env->count == 0) {
-        printf(GRAY "  (sin variables)\n" RST);
+        if (!env || env->output_count == 0)
+            printf(GRAY "  (sin variables)\n" RST);
     } else {
         int printed = 0;
         for (int i = 0; i < ENV_BUCKETS; i++) {
@@ -132,15 +142,15 @@ void tui_show_output(const Env* env, int hit_limit) {
                 if (is_temp_name(e->name)) continue;
                 printf("  " CYAN "%-16s" RST "= ", e->name);
                 if (e->val.kind == VAL_INT)
-                    printf(GREEN "%d\n" RST, e->val.ival);
+                    printf("%d\n", e->val.ival);
                 else if (e->val.kind == VAL_STR)
-                    printf(GREEN "%s\n" RST, e->val.sval ? e->val.sval : "\"\"");
+                    printf("%s\n", e->val.sval ? e->val.sval : "\"\"");
                 else
                     printf(GRAY "(indefinido)\n" RST);
                 printed++;
             }
         }
-        if (!printed)
+        if (!printed && env->output_count == 0)
             printf(GRAY "  (sin variables de usuario)\n" RST);
     }
     section_close();
