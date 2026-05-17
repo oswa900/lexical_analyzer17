@@ -7,6 +7,7 @@
 #include "include/parser.h"
 #include "include/error.h"
 #include "include/semantic.h"
+#include "include/codegen.h"
 #include "include/tui.h"
 
 char* get_content(FILE* file);
@@ -61,12 +62,17 @@ void run(const char* raw, SemanticAnalyzer* sa) {
     /* analisis semantico — usa la tabla acumulada */
     if (ast) semantic_analyze(sa, ast);
 
+    /* generacion de codigo intermedio (TAC) */
+    TACList* tac = error_stack_empty(errors) ? tac_generate(ast) : NULL;
+
     /* salida TUI */
     tui_show_ast(ast);
+    tui_show_code(tac);
     tui_show_symbols(sa->symbols);
     tui_show_errors(errors);
 
     /* limpieza parcial — NO liberar sa ni sa->symbols */
+    tac_free(tac);
     ast_free(ast);
     parser_free(p);
     destoy_list(&tokens);

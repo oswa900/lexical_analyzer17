@@ -118,6 +118,17 @@ static void print_error_line(const Error* e) {
     }
 }
 
+/* ── Codigo intermedio (TAC) ──────────────────────── */
+void tui_show_code(const TACList* tac) {
+    section_open("Codigo Intermedio (TAC)", "\033[35m");
+    if (tac)
+        tac_print(tac);
+    else
+        printf(GRAY "  (sin codigo generado)\n" RST);
+    section_close();
+}
+
+/* ── Errores ──────────────────────────────────────── */
 void tui_show_errors(const ErrorStack* es) {
     if (error_stack_empty(es)) {
         printf(GREEN "  Sin errores\n" RST "\n");
