@@ -7,11 +7,11 @@
 #include "../include/error.h"
 
 static const char* keywords[] = {
-    "if", "while", "for", "else", "then", "do", "to"
+    "if", "while", "for", "else", "then", "do", "to", "echo"
 };
 
 static const char* commands[] = {
-    "ls", "mkdir", "touch", "edit", "rm", "help", "clear", "vim", "echo"
+    "ls", "mkdir", "touch", "edit", "rm", "help", "clear", "vim"
 };
 
 static int is_keyword(const char* str) {
@@ -48,7 +48,9 @@ static int is_valid_path_char(char c) {
 }
 
 static int is_path_start(const char* s) {
-    if (*s == '/') return 1;
+    /* "/" solo es ruta si le sigue un caracter de path (no espacio ni operador) */
+    if (*s == '/' && (isalnum((unsigned char)*(s+1)) || *(s+1) == '.' || *(s+1) == '~' || *(s+1) == '/'))
+        return 1;
     if (*s == '.' && *(s+1) == '/') return 1;
     if (*s == '.' && *(s+1) == '.' && *(s+2) == '/') return 1;
     return 0;
@@ -201,7 +203,8 @@ List* tokenize(const char* input, ErrorStack* errors) {
         if (is_path_start(str)) {
             flush_buffer(l, buffer, &i, errors);
             int has_invalid = 0;
-            while (*str && *str != ' ' && *str != '\n') {
+            while (*str && *str != ' ' && *str != '\n'
+                   && *str != '(' && *str != ')') {
                 if (!is_valid_path_char(*str)) has_invalid = 1;
                 buffer[i++] = *str++;
             }

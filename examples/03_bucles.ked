@@ -1,0 +1,12 @@
+suma = 0
+for i = 1 to 10 do suma = suma + i
+echo suma
+
+potencia = 1
+for i = 1 to 8 do potencia = potencia * 2
+echo potencia
+
+x = 100
+pasos = 0
+while x > 1 do x = x / 2
+echo x

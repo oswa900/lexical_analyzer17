@@ -19,7 +19,10 @@ typedef enum NodeType {
     NODE_BINOP,
     NODE_WHILE_STATEMENT,
     NODE_FOR_STATEMENT,
-    NODE_LOGICAL
+    NODE_LOGICAL,
+    NODE_ECHO,
+    NODE_UNARY_NEG,
+    NODE_SHELL_CMD
 } NodeType;
 
 typedef struct ASTNode {
