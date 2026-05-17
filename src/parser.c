@@ -49,6 +49,8 @@ static ASTNode* parse_if_statement(Parser* p);
 static ASTNode* parse_while_statement(Parser* p);
 static ASTNode* parse_for_statement(Parser* p);
 static ASTNode* parse_echo(Parser* p);
+static ASTNode* parse_shell_cmd(Parser* p);
+static ASTNode* parse_arg(Parser* p);
 static ASTNode* parse_logical(Parser* p);
 static ASTNode* parse_condition(Parser* p);
 static ASTNode* parse_expression(Parser* p);
@@ -88,6 +90,32 @@ static ASTNode* parse_statement(Parser* p) {
         return parse_for_statement(p);
     if (current_type(p) == KEYWORD && strcmp(current_lexeme(p), "echo")  == 0)
         return parse_echo(p);
+
+    /* EXPRESION_S → ( FUNCION ARGUMENTOS )
+       Lookahead: '(' seguido de un identificador de funcion valida. */
+    if (current_type(p) == SYMBOLS && strcmp(current_lexeme(p), "(") == 0
+        && p->current->next && p->current->next->type == IDENTIFIER) {
+        Token* next = p->current->next;
+        if (is_valid_function(next->lexeme))
+            return parse_shell_cmd(p);
+        /* E-LEX-01: identificador en posicion de FUNCION que no es valido.
+           Solo se activa si el siguiente token parece argumento (RUTA, STRING o ')'),
+           para no confundirlo con expresiones matematicas como (x + 5). */
+        Token* after = next->next;
+        if (after && (after->type == RUTA || after->type == STRING
+            || (after->type == SYMBOLS && strcmp(after->lexeme, ")") == 0))) {
+            error_push(p->errors, E_LEX_01, next->lexeme);
+            /* recuperacion: consumir hasta ')' */
+            advance(p);  /* '(' */
+            int depth = 1;
+            while (p->current && depth > 0) {
+                if (p->current->type == SYMBOLS && strcmp(p->current->lexeme, "(") == 0) depth++;
+                if (p->current->type == SYMBOLS && strcmp(p->current->lexeme, ")") == 0) depth--;
+                advance(p);
+            }
+            return NULL;
+        }
+    }
 
     return parse_expression(p);
 }
@@ -194,6 +222,53 @@ static ASTNode* parse_echo(Parser* p) {
     advance(p);  /* consume "echo" */
     node->left = parse_expression(p);
     if (!node->left) { ast_free(node); return NULL; }
+    return node;
+}
+
+/* ATOMO → CADENA | RUTA | IDENTIFIER | NUMBER (argumento de comando shell)
+   RUTA y CADENA se almacenan como NODE_FACTOR_STRING (literales, sin verificacion
+   semantica). IDENTIFIER como NODE_FACTOR_ID (variable, se verifica). */
+static ASTNode* parse_arg(Parser* p) {
+    if (!p->current) return NULL;
+    NodeType t;
+    switch (current_type(p)) {
+        case STRING:
+        case RUTA:       t = NODE_FACTOR_STRING; break;
+        case IDENTIFIER: t = NODE_FACTOR_ID;     break;
+        case NUMBER:     t = NODE_FACTOR_NUMBER; break;
+        default: return NULL;
+    }
+    ASTNode* n = make_node(t);
+    n->value = strdup(p->current->lexeme);
+    advance(p);
+    return n;
+}
+
+// EXPRESION_S → ( FUNCION ARGUMENTOS )
+// ARGUMENTOS  → EXPRESION ARGUMENTOS | ε
+static ASTNode* parse_shell_cmd(Parser* p) {
+    advance(p);  /* consume '(' */
+
+    ASTNode* node = make_node(NODE_SHELL_CMD);
+    node->value = strdup(p->current->lexeme);  /* nombre de la funcion */
+    advance(p);  /* consume FUNCION */
+
+    /* ARGUMENTOS: cero o mas atomos hasta ')' */
+    ASTNode* tail = NULL;
+    while (p->current
+           && !(p->current->type == SYMBOLS && strcmp(p->current->lexeme, ")") == 0)) {
+        ASTNode* arg = parse_arg(p);
+        if (!arg) { ast_free(node); return NULL; }
+        if (!node->left) { node->left = arg; tail = arg; }
+        else             { tail->next = arg; tail = arg; }
+    }
+
+    /* ')' */
+    if (!p->current || strcmp(p->current->lexeme, ")") != 0) {
+        error_push(p->errors, E_SIN_01, node->value);
+        ast_free(node); return NULL;
+    }
+    advance(p);
     return node;
 }
 
@@ -370,6 +445,7 @@ static const char* node_type_name(NodeType t) {
         case NODE_BINOP:           return "BINOP";
         case NODE_ECHO:            return "ECHO";
         case NODE_UNARY_NEG:       return "NEG";
+        case NODE_SHELL_CMD:       return "SHELL_CMD";
         default:                   return "UNKNOWN";
     }
 }
@@ -415,6 +491,10 @@ void ast_print(ASTNode* node, int indent) {
         case NODE_UNARY_NEG:
             ast_print(node->left, indent + 1);
             break;
+        case NODE_SHELL_CMD:
+            for (ASTNode* a = node->left; a; a = a->next)
+                ast_print(a, indent + 1);
+            break;
         default:
             break;
     }
@@ -444,6 +524,11 @@ void ast_free(ASTNode* node) {
             ast_free(node->right);
             ast_free(node->then_branch);
             break;
+        case NODE_SHELL_CMD: {
+            ASTNode* a = node->left;
+            while (a) { ASTNode* nx = a->next; a->next = NULL; ast_free(a); a = nx; }
+            break;
+        }
         case NODE_LOGICAL:
         case NODE_CONDITION:
         case NODE_BINOP:

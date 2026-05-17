@@ -234,6 +234,40 @@ int eval_run(const TACList* tac, Env* env) {
                 break;
             }
 
+            /* syscall: ejecutar comando del sistema.
+               Los tokens del template que existan en env se reemplazan
+               por su valor en tiempo de ejecucion (para pasar variables). */
+            case TAC_SYSCALL: {
+                if (!in->arg1) { pc++; break; }
+                char resolved[1024] = "";
+                char buf[1024];
+                strncpy(buf, in->arg1, sizeof(buf) - 1);
+                char* tok = strtok(buf, " ");
+                int first = 1;
+                while (tok) {
+                    if (!first) strncat(resolved, " ", sizeof(resolved) - strlen(resolved) - 1);
+                    if (!first) {
+                        Value v = env_get(env, tok);
+                        char tmp[256];
+                        if (v.kind == VAL_STR && v.sval)
+                            snprintf(tmp, sizeof(tmp), "%s", v.sval);
+                        else if (v.kind == VAL_INT)
+                            snprintf(tmp, sizeof(tmp), "%d", v.ival);
+                        else
+                            snprintf(tmp, sizeof(tmp), "%s", tok);
+                        strncat(resolved, tmp, sizeof(resolved) - strlen(resolved) - 1);
+                    } else {
+                        strncat(resolved, tok, sizeof(resolved) - strlen(resolved) - 1);
+                    }
+                    first = 0;
+                    tok = strtok(NULL, " ");
+                }
+                int ret = system(resolved);
+                (void)ret;
+                pc++;
+                break;
+            }
+
             /* result = -arg1 */
             case TAC_NEG: {
                 Value a = resolve(env, in->arg1);

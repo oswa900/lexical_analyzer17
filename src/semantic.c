@@ -65,6 +65,11 @@ static void analyze_node(SemanticAnalyzer* sa, ASTNode* node) {
         case NODE_FACTOR_EXPR:     analyze_node(sa, node->left); break;
         case NODE_ECHO:            analyze_node(sa, node->left); break;
         case NODE_UNARY_NEG:       analyze_node(sa, node->left); break;
+        case NODE_SHELL_CMD:
+            sym_table_insert(sa->symbols, node->value, SYM_FUNCTION);
+            for (ASTNode* a = node->left; a; a = a->next)
+                if (a->type == NODE_FACTOR_ID) analyze_factor_id(sa, a);
+            break;
         /* NUMBER y STRING son literales — no requieren verificacion */
         default: break;
     }

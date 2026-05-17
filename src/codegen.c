@@ -236,6 +236,34 @@ static void gen_stmt(TACList* tac, ASTNode* node) {
             break;
         }
 
+        /* ( FUNCION ARGUMENTOS ) — construir string de comando */
+        case NODE_SHELL_CMD: {
+            char cmd[1024];
+            strncpy(cmd, node->value, sizeof(cmd) - 1);
+            cmd[sizeof(cmd) - 1] = '\0';
+            for (ASTNode* arg = node->left; arg; arg = arg->next) {
+                strncat(cmd, " ", sizeof(cmd) - strlen(cmd) - 1);
+                if (!arg->value) continue;
+                if (arg->type == NODE_FACTOR_STRING) {
+                    /* quitar comillas simples: 'path' → path */
+                    const char* s = arg->value;
+                    size_t len = strlen(s);
+                    if (len >= 2 && s[0] == '\'' && s[len-1] == '\'') {
+                        size_t inner = len - 2;
+                        size_t space = sizeof(cmd) - strlen(cmd) - 1;
+                        strncat(cmd, s + 1, inner < space ? inner : space);
+                    } else {
+                        strncat(cmd, s, sizeof(cmd) - strlen(cmd) - 1);
+                    }
+                } else {
+                    /* RUTA, IDENTIFIER o NUMBER — usar tal cual */
+                    strncat(cmd, arg->value, sizeof(cmd) - strlen(cmd) - 1);
+                }
+            }
+            emit(tac, TAC_SYSCALL, NULL, cmd, NULL);
+            break;
+        }
+
         /* echo expr */
         case NODE_ECHO: {
             char* val = gen_expr(tac, node->left);
@@ -292,6 +320,9 @@ void tac_print(const TACList* tac) {
             case TAC_EQ:  case TAC_NE:  case TAC_AND: case TAC_OR:
                 printf("  %s = %s %s %s\n",
                        i->result, i->arg1, op_str(i->op), i->arg2);
+                break;
+            case TAC_SYSCALL:
+                printf("  syscall %s\n", i->arg1);
                 break;
             case TAC_NEG:
                 printf("  %s = -%s\n", i->result, i->arg1);
