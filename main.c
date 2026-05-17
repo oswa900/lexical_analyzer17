@@ -7,84 +7,81 @@
 #include "include/parser.h"
 #include "include/error.h"
 #include "include/semantic.h"
+#include "include/tui.h"
 
 char* get_content(FILE* file);
-void run(const char* raw);          
+void  run(const char* raw, SemanticAnalyzer* sa);
 
 int main(int argc, char **argv) {
-	if (argv[1]) {
-		FILE* file = fopen(argv[1], "r");
-		if (!file) { fprintf(stderr, "No se pudo abrir el archivo\n"); return 1; }
-		char* heap_buf = get_content(file);
-		fclose(file);
-		run(heap_buf);
-		free(heap_buf);
-	} else {
-		char line[1024];
-		while (1) {
-			printf(">>> ");
-			fflush(stdout);
-			if (!fgets(line, sizeof(line), stdin)) {
-				printf("\n");   /* salto de línea al recibir EOF */
-				break;
-			}
-			if (line[0] == '\n' || line[0] == '\0') continue;
-			run(line);
-		}
-	}
-	return 0;
+    /* SemanticAnalyzer persiste durante toda la sesion
+       para que la tabla de simbolos sobreviva entre lineas del REPL. */
+    SemanticAnalyzer* sa = semantic_init(NULL);
+
+    if (argv[1]) {
+        /* modo archivo */
+        FILE* file = fopen(argv[1], "r");
+        if (!file) { fprintf(stderr, "No se pudo abrir el archivo\n"); return 1; }
+        char* buf = get_content(file);
+        fclose(file);
+        run(buf, sa);
+        free(buf);
+    } else {
+        /* modo REPL */
+        tui_header();
+        char line[1024];
+        while (1) {
+            tui_prompt();
+            if (!fgets(line, sizeof(line), stdin)) {
+                printf("\n");
+                break;
+            }
+            if (line[0] == '\n' || line[0] == '\0') continue;
+            run(line, sa);
+        }
+    }
+
+    semantic_free(sa);
+    return 0;
 }
 
-/* ── lógica principal reutilizable ── */
-void run(const char* raw) {
-	ErrorStack* errors = error_stack_init();
+void run(const char* raw, SemanticAnalyzer* sa) {
+    ErrorStack* errors = error_stack_init();
 
-	/* análisis léxico */
-	List* tokens = tokenize(raw, errors);
+    /* Apuntar el SA al stack de errores de esta iteracion.
+       La tabla de simbolos (sa->symbols) no se toca — persiste. */
+    sa->errors = errors;
 
-	/* análisis sintáctico */
-	Parser*  p   = parser_init(tokens, errors);
-	ASTNode* ast = parse_program(p);
+    /* analisis lexico */
+    List* tokens = tokenize(raw, errors);
 
-	/* imprimir AST */
-	if (ast) {
-		printf("=== AST ===\n");
-		ast_print(ast, 0);
-		printf("\n");
-	} else {
-		printf("[!] El parser no produjo un AST valido.\n\n");
-	}
+    /* analisis sintactico */
+    Parser*  p   = parser_init(tokens, errors);
+    ASTNode* ast = parse_program(p);
 
-	/* análisis semántico */
-	if (ast) {
-		SemanticAnalyzer* sa = semantic_init(errors);
-		if (sa) {
-			semantic_analyze(sa, ast);
-			printf("=== Tabla de simbolos ===\n");
-			sym_table_print(sa->symbols);
-			printf("\n");
-			semantic_free(sa);
-		}
-	}
+    /* analisis semantico — usa la tabla acumulada */
+    if (ast) semantic_analyze(sa, ast);
 
-	/* reporte de errores */
-	error_stack_print(errors);
+    /* salida TUI */
+    tui_show_ast(ast);
+    tui_show_symbols(sa->symbols);
+    tui_show_errors(errors);
 
-	/* limpieza */
-	ast_free(ast);
-	parser_free(p);
-	destoy_list(&tokens);
-	error_stack_free(errors);
+    /* limpieza parcial — NO liberar sa ni sa->symbols */
+    ast_free(ast);
+    parser_free(p);
+    destoy_list(&tokens);
+    sa->errors = NULL;
+    error_stack_free(errors);
 }
 
 char* get_content(FILE* file) {
-	if (!file) return NULL;
-	fseek(file, 0, SEEK_END);
-	long size = ftell(file);
-	rewind(file);
-	char* buffer = malloc(size + 1);
-	if (!buffer) return NULL;
-	size_t n = fread(buffer, 1, size, file);
-	buffer[n] = '\0';
-	return buffer;
+    if (!file) return NULL;
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    rewind(file);
+    char* buffer = malloc(size + 1);
+    if (!buffer) return NULL;
+    size_t n = fread(buffer, 1, size, file);
+    buffer[n] = '\0';
+    return buffer;
 }
