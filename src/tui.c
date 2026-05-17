@@ -118,6 +118,34 @@ static void print_error_line(const Error* e) {
     }
 }
 
+/* ── Resultado de ejecucion ───────────────────────── */
+void tui_show_output(const Env* env, int hit_limit) {
+    section_open("Resultado de ejecucion", GREEN);
+    if (hit_limit)
+        printf(YEL "  ! Limite de pasos alcanzado (posible bucle infinito)\n" RST);
+    if (!env || env->count == 0) {
+        printf(GRAY "  (sin variables)\n" RST);
+    } else {
+        int printed = 0;
+        for (int i = 0; i < ENV_BUCKETS; i++) {
+            for (EnvEntry* e = env->buckets[i]; e; e = e->next) {
+                if (is_temp_name(e->name)) continue;
+                printf("  " CYAN "%-16s" RST "= ", e->name);
+                if (e->val.kind == VAL_INT)
+                    printf(GREEN "%d\n" RST, e->val.ival);
+                else if (e->val.kind == VAL_STR)
+                    printf(GREEN "%s\n" RST, e->val.sval ? e->val.sval : "\"\"");
+                else
+                    printf(GRAY "(indefinido)\n" RST);
+                printed++;
+            }
+        }
+        if (!printed)
+            printf(GRAY "  (sin variables de usuario)\n" RST);
+    }
+    section_close();
+}
+
 /* ── Codigo intermedio (TAC) ──────────────────────── */
 void tui_show_code(const TACList* tac) {
     section_open("Codigo Intermedio (TAC)", "\033[35m");
