@@ -39,7 +39,7 @@ static void section_close(void) {
 void tui_header(void) {
     printf(CYAN BOLD "\n");
     printf("  +");  fill('=', W - 4);  printf("+\n");
-    printf("  |  KDE Compiler  |  REPL");
+    printf("  |  KED Compiler  |  REPL");
     int pad = W - 4 - 26;
     fill(' ', pad > 0 ? pad : 1);
     printf("|\n");

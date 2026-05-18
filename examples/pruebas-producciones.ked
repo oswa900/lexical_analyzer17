@@ -1,5 +1,0 @@
-(mkdir /tmp/kde_prueba)
-(touch /tmp/kde_prueba/hola.txt)
-(ls /tmp/kde_prueba)
-(rm /tmp/kde_prueba/hola.txt)
-(rm /tmp/kde_prueba)
