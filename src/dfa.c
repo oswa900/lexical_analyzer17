@@ -177,7 +177,7 @@ List* tokenize(const char* input, ErrorStack* errors) {
     while (*str) {
 
         /* whitespace */
-        if (*str == ' ' || *str == '\n') {
+        if (*str == ' ' || *str == '\n' || *str == '\r' || *str == '\t') {
             flush_buffer(l, buffer, &i, errors);
             str++;
             continue;
@@ -187,7 +187,7 @@ List* tokenize(const char* input, ErrorStack* errors) {
         if (*str == '"') {
             flush_buffer(l, buffer, &i, errors);
             buffer[i++] = *str++;
-            while (*str && *str != '"' && *str != '\n')
+            while (*str && *str != '"' && *str != '\n' && *str != '\r')
                 buffer[i++] = *str++;
             if (*str == '"') buffer[i++] = *str++;
             buffer[i] = '\0';
@@ -203,7 +203,7 @@ List* tokenize(const char* input, ErrorStack* errors) {
         if (is_path_start(str)) {
             flush_buffer(l, buffer, &i, errors);
             int has_invalid = 0;
-            while (*str && *str != ' ' && *str != '\n'
+            while (*str && *str != ' ' && *str != '\n' && *str != '\r' && *str != '\t'
                    && *str != '(' && *str != ')') {
                 if (!is_valid_path_char(*str)) has_invalid = 1;
                 buffer[i++] = *str++;

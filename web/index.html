@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador Sintáctico y Semántico - Equipo 5</title>
+    <!-- Google Fonts: Inter & Fira Code -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon"></div>
+                <h1>Analizador <span>Léxico y Sintáctico</span></h1>
+                <span class="version-badge">Equipo 5</span>
+            </div>
+            
+            <div class="pipeline-status">
+                <div class="status-node active" id="status-lexer">
+                    <span class="pulse"></span> Léxico
+                </div>
+                <div class="status-arrow">→</div>
+                <div class="status-node active" id="status-parser">
+                    <span class="pulse"></span> Sintáctico
+                </div>
+                <div class="status-arrow">→</div>
+                <div class="status-node active" id="status-semantic">
+                    <span class="pulse"></span> Semántico
+                </div>
+                <div class="status-arrow">→</div>
+                <div class="status-node active" id="status-tac">
+                    <span class="pulse"></span> TAC
+                </div>
+                <div class="status-arrow">→</div>
+                <div class="status-node active" id="status-vm">
+                    <span class="pulse"></span> VM
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <select id="example-select" class="custom-select">
+                    <option value="" disabled selected>Cargar ejemplo...</option>
+                    <option value="aritmetica">01 - Aritmética básica</option>
+                    <option value="condicionales">02 - Condicionales (if/else)</option>
+                    <option value="bucles">03 - Bucles (for/while)</option>
+                    <option value="factorial">04 - Cálculo de Factorial</option>
+                    <option value="producciones">05 - Comandos de Sistema</option>
+                    <option value="errores_lexicos">06 - Errores Léxicos</option>
+                    <option value="errores_semanticos">07 - Errores Semánticos</option>
+                    <option value="ejemplo_general">08 - Ejemplo General (examples.ked)</option>
+                    <option value="errores_complejos">09 - Errores Múltiples (test_errors.ked)</option>
+                </select>
+                <button id="run-btn" class="glow-btn">
+                    <svg viewBox="0 0 24 24" class="btn-icon"><path d="M8 5v14l11-7z"/></svg>
+                    Ejecutar
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="app-body">
+            <!-- LEFT COLUMN: EDITOR -->
+            <section class="editor-section card">
+                <div class="card-header">
+                    <div class="title-with-icon">
+                        <svg viewBox="0 0 24 24" class="header-svg"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+                        <h2>Editor de Código KED</h2>
+                    </div>
+                    <div class="editor-status">
+                        <span class="editor-mode">Real-time</span>
+                    </div>
+                </div>
+
+                <div class="editor-wrapper">
+                    <div class="line-numbers" id="line-numbers">
+                        <span>1</span>
+                    </div>
+                    <div class="textarea-container">
+                        <div class="syntax-highlight" id="syntax-highlight"></div>
+                        <textarea id="code-input" spellcheck="false" placeholder="Escribe tu código KED aquí o selecciona un ejemplo arriba..."></textarea>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <span id="char-count">0 caracteres</span>
+                    <span id="line-count">1 línea</span>
+                </div>
+            </section>
+
+            <!-- RIGHT COLUMN: VISUALIZATIONS -->
+            <section class="visualizer-section card">
+                <div class="card-header tab-header">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-tab="tab-ast">
+                            <svg viewBox="0 0 24 24" class="tab-svg"><path d="M12 2L2 22h20L12 2zm0 3.99L19.53 19H4.47L12 5.99zM13 16h-2v2h2v-2zm0-6h-2v4h2v-4z"/></svg>
+                            Árbol Sintáctico (AST)
+                        </button>
+                        <button class="tab-btn" data-tab="tab-tac">
+                            <svg viewBox="0 0 24 24" class="tab-svg"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                            Código Intermedio (TAC)
+                        </button>
+                        <button class="tab-btn" data-tab="tab-console">
+                            <svg viewBox="0 0 24 24" class="tab-svg"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 12H4v-2h8v2zm8-4H4V8h16v4z"/></svg>
+                            Consola y Variables
+                        </button>
+                        <button class="tab-btn" data-tab="tab-lex">
+                            <svg viewBox="0 0 24 24" class="tab-svg"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+                            Tabla Léxica
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-body tab-content-container">
+                    <!-- TAB 1: AST -->
+                    <div class="tab-content active" id="tab-ast">
+                        <div class="ast-legend">
+                            <span class="legend-node program">Program</span>
+                            <span class="legend-node assign">Asignación</span>
+                            <span class="legend-node cond">Condición</span>
+                            <span class="legend-node loop">Bucle</span>
+                            <span class="legend-node syscall">Comando</span>
+                        </div>
+                        <div class="ast-tree-container" id="ast-render">
+                            <div class="empty-state">
+                                <p>Escribe código válido para visualizar el árbol de sintaxis abstracta (AST) de forma interactiva.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: TAC -->
+                    <div class="tab-content" id="tab-tac">
+                        <div class="tac-container">
+                            <div class="code-output" id="tac-render">
+                                <pre><code class="language-tac">// El código de tres direcciones generado aparecerá aquí</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: CONSOLE & VARIABLES -->
+                    <div class="tab-content" id="tab-console">
+                        <div class="console-variables-split">
+                            <!-- Virtual Terminal -->
+                            <div class="terminal-container">
+                                <div class="terminal-header">
+                                    <span class="dot red"></span>
+                                    <span class="dot yellow"></span>
+                                    <span class="dot green"></span>
+                                    <span class="terminal-title">Consola de Ejecución</span>
+                                </div>
+                                <div class="terminal-body" id="console-render">
+                                    <div class="terminal-line"><span class="prompt">$</span> ./kde</div>
+                                    <div class="terminal-line system-out">Esperando compilación y ejecución...</div>
+                                    <div class="terminal-line system-out">Carga o escribe código arriba y haz clic en "Ejecutar" para iniciar el análisis nativo en C.</div>
+                                </div>
+                            </div>
+
+                            <!-- Symbol Table -->
+                            <div class="symbols-container">
+                                <h3>Tabla de Símbolos (VM)</h3>
+                                <div class="table-wrapper">
+                                    <table class="symbols-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Variable</th>
+                                                <th>Tipo</th>
+                                                <th>Valor Actual</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="symbols-render">
+                                            <tr>
+                                                <td colspan="4" class="empty-table">Sin variables definidas en memoria</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: LEXICAL STREAM -->
+                    <div class="tab-content" id="tab-lex">
+                        <div class="lex-legend">
+                            <span class="legend-token identifier">Identificador</span>
+                            <span class="legend-token keyword">Palabra Clave</span>
+                            <span class="legend-token number">Número</span>
+                            <span class="legend-token operation">Operación</span>
+                            <span class="legend-token string">Cadena</span>
+                            <span class="legend-token symbols">Símbolos</span>
+                            <span class="legend-token ruta">Ruta</span>
+                        </div>
+                        <div class="tokens-grid" id="tokens-render">
+                            <div class="empty-state">
+                                <p>Los tokens detectados en el análisis léxico se listarán aquí en tiempo real.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER / ERROR ZONE -->
+        <footer class="app-footer" id="error-bar">
+            <div class="error-summary green" id="error-summary">
+                <span class="error-icon">✓</span>
+                <span class="error-text">Compilación exitosa. Sin errores léxicos, sintácticos ni semánticos.</span>
+            </div>
+            <div class="error-details-list" id="error-details-list" style="display: none;">
+                <!-- Error cards injected here -->
+            </div>
+        </footer>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
