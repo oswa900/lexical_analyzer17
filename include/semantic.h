@@ -1,15 +1,8 @@
 #ifndef SEMANTIC_H
 #define SEMANTIC_H
 
-/* ---------------------------------------------------------------
- * Analizador semántico
- *
- * Recorre el AST producido por parser.c, llena la tabla de
- * símbolos y reporta errores semánticos via ErrorStack.
- *
- * Errores semánticos definidos:
- *   E_SEM_01 — variable usada antes de ser asignada
- * --------------------------------------------------------------- */
+// Analizador semantico: recorre el AST, llena la tabla de simbolos
+// y reporta errores E_SEM_01..E_SEM_05 via ErrorStack.
 
 #include "../include/parser.h"
 #include "../include/error.h"

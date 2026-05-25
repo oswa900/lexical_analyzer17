@@ -3,7 +3,7 @@
 #include <string.h>
 #include "../include/tui.h"
 
-/* ── ANSI ── */
+// Codigos ANSI
 #define RST   "\033[0m"
 #define BOLD  "\033[1m"
 #define RED   "\033[31m"
@@ -13,17 +13,14 @@
 #define CYAN  "\033[36m"
 #define GRAY  "\033[90m"
 
-#define W 50   /* ancho visible de los separadores */
-
-/* ── helpers ─────────────────────────────────────── */
+#define W 50
 
 static void fill(char c, int n) {
     for (int i = 0; i < n; i++) putchar(c);
 }
 
-/* Separador con título:  "── TITULO ──────────" */
 static void section_open(const char* title, const char* color) {
-    int used = 3 + (int)strlen(title) + 1;   /* "── " + title + " " */
+    int used = 3 + (int)strlen(title) + 1;
     printf("\n%s── %s ", color, title);
     fill('-', W - used > 0 ? W - used : 2);
     printf(RST "\n");
@@ -35,7 +32,6 @@ static void section_close(void) {
     printf(RST "\n\n");
 }
 
-/* ── banner de inicio ─────────────────────────────── */
 void tui_header(void) {
     printf(CYAN BOLD "\n");
     printf("  +");  fill('=', W - 4);  printf("+\n");
@@ -47,13 +43,11 @@ void tui_header(void) {
     printf(RST "\n");
 }
 
-/* ── prompt coloreado ─────────────────────────────── */
 void tui_prompt(void) {
     printf(GREEN BOLD ">>> " RST);
     fflush(stdout);
 }
 
-/* ── AST ──────────────────────────────────────────── */
 void tui_show_ast(ASTNode* ast) {
     section_open("AST", YEL);
     if (ast)
@@ -63,7 +57,6 @@ void tui_show_ast(ASTNode* ast) {
     section_close();
 }
 
-/* ── Tabla de simbolos ────────────────────────────── */
 void tui_show_symbols(const SymbolTable* st) {
     section_open("Tabla de simbolos", BLUE);
     if (!st || st->count == 0) {
@@ -84,7 +77,6 @@ void tui_show_symbols(const SymbolTable* st) {
     section_close();
 }
 
-/* ── Errores ──────────────────────────────────────── */
 static void print_error_line(const Error* e) {
     switch (e->code) {
         case E_LEX_01:
@@ -148,20 +140,17 @@ static void print_error_line(const Error* e) {
     }
 }
 
-/* ── Resultado de ejecucion ───────────────────────── */
 void tui_show_output(const Env* env, int hit_limit) {
     section_open("Resultado de ejecucion", GREEN);
     if (hit_limit)
         printf(YEL "  ! Limite de pasos alcanzado (posible bucle infinito)\n" RST);
 
-    /* output de sentencias echo */
     if (env && env->output_count > 0) {
         for (int i = 0; i < env->output_count; i++)
             printf("  " GREEN "%s\n" RST, env->output[i]);
         if (env->count > 0) printf("\n");
     }
 
-    /* valores de variables de usuario */
     if (!env || env->count == 0) {
         if (!env || env->output_count == 0)
             printf(GRAY "  (sin variables)\n" RST);
@@ -186,7 +175,6 @@ void tui_show_output(const Env* env, int hit_limit) {
     section_close();
 }
 
-/* ── Codigo intermedio (TAC) ──────────────────────── */
 void tui_show_code(const TACList* tac) {
     section_open("Codigo Intermedio (TAC)", "\033[35m");
     if (tac)
@@ -196,7 +184,6 @@ void tui_show_code(const TACList* tac) {
     section_close();
 }
 
-/* ── Errores ──────────────────────────────────────── */
 void tui_show_errors(const ErrorStack* es) {
     if (error_stack_empty(es)) {
         printf(GREEN "  Sin errores\n" RST "\n");
@@ -205,7 +192,7 @@ void tui_show_errors(const ErrorStack* es) {
 
     section_open("Errores", RED);
 
-    /* imprimir en orden de insercion (mas antiguo primero) */
+    // Imprimir en orden de insercion (mas antiguo primero)
     Error** arr = malloc((size_t)es->count * sizeof(Error*));
     if (!arr) return;
     int n = 0;

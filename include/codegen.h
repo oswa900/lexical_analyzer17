@@ -1,16 +1,7 @@
 #ifndef CODEGEN_H
 #define CODEGEN_H
 
-/* ---------------------------------------------------------------
- * Generacion de Codigo Intermedio — Codigo de Tres Direcciones
- *
- * Cada instruccion TAC tiene la forma:
- *   result = arg1 op arg2   (operacion binaria)
- *   result = arg1           (copia / asignacion)
- *   label:                  (etiqueta)
- *   goto label              (salto incondicional)
- *   ifnot arg1 goto label   (salto condicional)
- * --------------------------------------------------------------- */
+// Generacion de Codigo Intermedio de Tres Direcciones (TAC)
 
 #include "parser.h"
 
