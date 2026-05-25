@@ -7,6 +7,11 @@ typedef enum ErrorCode {
     E_LEX_03 = 103,
     E_LEX_04 = 104,
     E_SIN_01 = 201,
+    E_SIN_02 = 202,
+    E_SIN_03 = 203,
+    E_SIN_04 = 204,
+    E_SIN_05 = 205,
+    E_SIN_06 = 206,
     E_SEM_01  = 500
 } ErrorCode;
 

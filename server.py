@@ -35,7 +35,7 @@ class KEDRequestHandler(SimpleHTTPRequestHandler):
             try:
                 # We call WSL to run the compiled Linux binary
                 result = subprocess.run(
-                    ["wsl", "./kde", "temp.ked"],
+                    [ "./kde", "temp.ked"],
                     cwd=WORKSPACE_DIR,
                     capture_output=True,
                     text=True,

@@ -104,8 +104,23 @@ static void print_error_line(const Error* e) {
                    e->lexeme ? e->lexeme : "?");
             break;
         case E_SIN_01:
-            printf("  " RED "[E-SIN-01]" RST " Se esperaba '(' antes de '%s'.\n",
+            printf("  " RED "[E-SIN-01]" RST " Se esperaba '(' al inicio de expresion: '%s'.\n",
                    e->lexeme ? e->lexeme : "?");
+            break;
+        case E_SIN_02:
+            printf("  " RED "[E-SIN-02]" RST " Se esperaba ')' al final de expresion.\n");
+            break;
+        case E_SIN_03:
+            printf("  " RED "[E-SIN-03]" RST " Se esperaba una FUNCION despues de '('.\n");
+            break;
+        case E_SIN_04:
+            printf("  " RED "[E-SIN-04]" RST " Orden invalido, FUNCION debe ir antes de ARGUMENTOS.\n");
+            break;
+        case E_SIN_05:
+            printf("  " RED "[E-SIN-05]" RST " Expresion vacia, se esperaba FUNCION.\n");
+            break;
+        case E_SIN_06:
+            printf("  " RED "[E-SIN-06]" RST " No se encontro ningun comando valido.\n");
             break;
         case E_SEM_01:
             printf("  " RED "[E-SEM-01]" RST " Variable '%s' usada antes de ser asignada.\n",
