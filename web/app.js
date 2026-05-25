@@ -17,7 +17,8 @@ const NodeType = {
     NODE_LOGICAL: 'LOGICAL',
     NODE_ECHO: 'ECHO',
     NODE_UNARY_NEG: 'NEG',
-    NODE_SHELL_CMD: 'SHELL_CMD'
+    NODE_SHELL_CMD: 'SHELL_CMD',
+    NODE_FACTOR_RUTA: 'RUTA'
 };
 
 // Token types matching Token_type in C
@@ -34,12 +35,21 @@ const TokenType = {
 
 // Error codes descriptions
 const ErrorDescriptions = {
-    'E-LEX-01': 'Comando de sistema no válido: el identificador en posición de función no coincide con comandos permitidos (ls, mkdir, touch, etc.)',
-    'E-LEX-02': 'Cadena de texto sin cerrar: falta la comilla de cierre al final',
-    'E-LEX-03': 'Formato de ruta no válido: contiene caracteres prohibidos en una ruta',
-    'E-LEX-04': 'Token o carácter no reconocido en el analizador léxico',
-    'E-SIN-01': 'Paréntesis sin cerrar: se esperaba un paréntesis de cierre \')\'',
-    'E-SEM-01': 'Error Semántico: Variable utilizada antes de ser declarada o asignada'
+    'E-LEX-01': 'Léxico: el identificador no es un comando de sistema válido (ls, mkdir, touch, edit, rm, help, clear, vim)',
+    'E-LEX-02': 'Léxico: cadena de texto sin cerrar — falta la comilla de cierre al final',
+    'E-LEX-03': 'Léxico: formato de ruta inválido — contiene caracteres no permitidos en una ruta',
+    'E-LEX-04': 'Léxico: token o carácter no reconocido por el analizador léxico',
+    'E-SIN-01': 'Sintáctico: se esperaba \'(\' al inicio de la expresión de comando',
+    'E-SIN-02': 'Sintáctico: se esperaba \')\' al final de la expresión de comando',
+    'E-SIN-03': 'Sintáctico: se esperaba una FUNCION después de \'(\'',
+    'E-SIN-04': 'Sintáctico: orden inválido — la FUNCION debe ir antes de los ARGUMENTOS',
+    'E-SIN-05': 'Sintáctico: expresión vacía — se esperaba una FUNCION',
+    'E-SIN-06': 'Sintáctico: no se encontró ningún comando válido en la sentencia',
+    'E-SEM-01': 'Semántico: el comando requiere al menos un argumento y no recibió ninguno',
+    'E-SEM-02': 'Semántico: el comando no acepta más de 1 argumento',
+    'E-SEM-03': 'Semántico: el argumento debe ser una RUTA (ej. /ruta/archivo), no una CADENA entre comillas',
+    'E-SEM-04': 'Semántico: la ruta especificada no existe en el sistema de archivos',
+    'E-SEM-05': 'Semántico: variable usada antes de ser asignada — debe declararse con \'var = valor\' primero'
 };
 
 // Preloaded template codes
@@ -103,7 +113,10 @@ echo fact`,
     errores_lexicos: `a = "cadena invalida con comillas dobles"
 b = 10@`,
 
-    errores_semanticos: `echo y`,
+    errores_semanticos: `(rm)
+(mkdir /ruta1 /ruta2)
+(ls 'archivo.txt')
+echo variable_no_declarada`,
 
     ejemplo_general: `x = 10
 y = 20
@@ -152,6 +165,17 @@ echo x
 
 const keywords = ["if", "while", "for", "else", "then", "do", "to", "echo"];
 const commands = ["ls", "mkdir", "touch", "edit", "rm", "help", "clear", "vim"];
+
+const CMD_RULES = {
+    'ls':    { min: 0, max: 1,  expectRuta: true  },
+    'mkdir': { min: 1, max: 1,  expectRuta: true  },
+    'touch': { min: 1, max: 1,  expectRuta: true  },
+    'edit':  { min: 1, max: 1,  expectRuta: true  },
+    'rm':    { min: 1, max: 1,  expectRuta: true  },
+    'help':  { min: 0, max: -1, expectRuta: false },
+    'clear': { min: 0, max: -1, expectRuta: false },
+    'vim':   { min: 1, max: 1,  expectRuta: true  },
+};
 
 function isKeyword(str) { return keywords.includes(str); }
 function isValidFunction(str) { return commands.includes(str); }
@@ -543,8 +567,10 @@ class Parser {
         let type;
         switch (t.type) {
             case TokenType.STRING:
-            case TokenType.RUTA:
                 type = NodeType.NODE_FACTOR_STRING;
+                break;
+            case TokenType.RUTA:
+                type = NodeType.NODE_FACTOR_RUTA;
                 break;
             case TokenType.IDENTIFIER:
                 type = NodeType.NODE_FACTOR_ID;
@@ -580,7 +606,7 @@ class Parser {
         }
 
         if (!this.current() || this.current().lexeme !== ')') {
-            this.errors.push({ code: 'E-SIN-01', lexeme: node.value });
+            this.errors.push({ code: 'E-SIN-02', lexeme: node.value });
             return null;
         }
         this.advance(); // consume ')'
@@ -689,7 +715,7 @@ class Parser {
         }
 
         if (t.type === TokenType.RUTA) {
-            const node = this.makeNode(NodeType.NODE_FACTOR_ID, t.lexeme);
+            const node = this.makeNode(NodeType.NODE_FACTOR_RUTA, t.lexeme);
             this.advance();
             return node;
         }
@@ -768,19 +794,42 @@ function analyzeSemantics(ast, errors) {
                 break;
 
             case NodeType.NODE_FACTOR_ID:
-                // Check if variable is defined
-                if (!definedVars.has(node.value)) {
-                    errors.push({ code: 'E-SEM-01', lexeme: node.value });
+                if (!isValidFunction(node.value) && !definedVars.has(node.value)) {
+                    errors.push({ code: 'E-SEM-05', lexeme: node.value });
                 }
                 break;
 
-            case NodeType.NODE_SHELL_CMD:
-                let arg = node.left;
-                while (arg) {
-                    visit(arg);
-                    arg = arg.next;
+            case NodeType.NODE_SHELL_CMD: {
+                const rule = CMD_RULES[node.value];
+                if (rule) {
+                    let argc = 0;
+                    let a = node.left;
+                    while (a) { argc++; a = a.next; }
+
+                    if (argc < rule.min) {
+                        errors.push({ code: 'E-SEM-01', lexeme: node.value });
+                    } else if (rule.max >= 0 && argc > rule.max) {
+                        errors.push({ code: 'E-SEM-02', lexeme: node.value });
+                    } else {
+                        let arg = node.left;
+                        while (arg) {
+                            if (rule.expectRuta && arg.type === NodeType.NODE_FACTOR_STRING) {
+                                errors.push({ code: 'E-SEM-03', lexeme: arg.value });
+                            } else if (arg.type === NodeType.NODE_FACTOR_ID) {
+                                visit(arg);
+                            }
+                            arg = arg.next;
+                        }
+                    }
+                } else {
+                    let arg = node.left;
+                    while (arg) {
+                        visit(arg);
+                        arg = arg.next;
+                    }
                 }
                 break;
+            }
 
             default:
                 break;
