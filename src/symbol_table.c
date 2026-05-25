@@ -3,9 +3,7 @@
 #include <string.h>
 #include "../include/symbol_table.h"
 
-/* ---------------------------------------------------------------
- * djb2 hash — rápido y suficientemente uniforme para identificadores
- * --------------------------------------------------------------- */
+// djb2 hash
 static unsigned int hash(const char* s) {
     unsigned int h = 5381;
     while (*s)
@@ -36,7 +34,7 @@ SymbolEntry* sym_table_insert(SymbolTable* st, const char* name, SymbolKind kind
     if (!st || !name) return NULL;
     unsigned int idx = hash(name);
 
-    /* ¿ya existe? — actualizar y devolver */
+    // ya existe: actualizar y devolver
     for (SymbolEntry* e = st->buckets[idx]; e; e = e->next) {
         if (strcmp(e->name, name) == 0) {
             e->kind    = kind;
@@ -45,7 +43,7 @@ SymbolEntry* sym_table_insert(SymbolTable* st, const char* name, SymbolKind kind
         }
     }
 
-    /* entrada nueva */
+    // entrada nueva
     SymbolEntry* e = malloc(sizeof(SymbolEntry));
     if (!e) return NULL;
     e->name    = strdup(name);
