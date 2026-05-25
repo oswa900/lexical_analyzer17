@@ -50,11 +50,41 @@ static void print_one(const Error* e) {
 		       e->lexeme ? e->lexeme : "?");
 		break;
         case E_SIN_01:
-		printf("Error sintactico [E-SIN-01]: Se esperaba '(' antes de '%s'.\n",
+		printf("Error sintactico [E-SIN-01]: Se esperaba '(' al inicio de expresion: '%s'.\n",
 		       e->lexeme ? e->lexeme : "?");
 		break;
+        case E_SIN_02:
+		printf("Error sintactico [E-SIN-02]: Se esperaba ')' al final de expresion.\n");
+		break;
+        case E_SIN_03:
+		printf("Error sintactico [E-SIN-03]: Se esperaba una FUNCION despues de '('.\n");
+		break;
+        case E_SIN_04:
+		printf("Error sintactico [E-SIN-04]: Orden invalido, FUNCION debe ir antes de ARGUMENTOS.\n");
+		break;
+        case E_SIN_05:
+		printf("Error sintactico [E-SIN-05]: Expresion vacia, se esperaba FUNCION.\n");
+		break;
+        case E_SIN_06:
+		printf("Error sintactico [E-SIN-06]: No se encontro ningun comando valido.\n");
+		break;
 	case E_SEM_01:
-		printf("Error semantico [E-SEM-01]: Variable '%s' usada sin declarar.\n",
+		printf("Error semantico [E-SEM-01]: '%s' requiere al menos un argumento.\n",
+		       e->lexeme ? e->lexeme : "?");
+		break;
+	case E_SEM_02:
+		printf("Error semantico [E-SEM-02]: '%s' no acepta mas de 1 argumento.\n",
+		       e->lexeme ? e->lexeme : "?");
+		break;
+	case E_SEM_03:
+		printf("Error semantico [E-SEM-03]: Argumento debe ser RUTA, no CADENA.\n");
+		break;
+	case E_SEM_04:
+		printf("Error semantico [E-SEM-04]: La ruta '%s' no existe.\n",
+		       e->lexeme ? e->lexeme : "?");
+		break;
+	case E_SEM_05:
+		printf("Error semantico [E-SEM-05]: Variable '%s' usada sin declarar.\n",
 		       e->lexeme ? e->lexeme : "?");
 		break;
 

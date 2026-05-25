@@ -39,7 +39,7 @@ static void section_close(void) {
 void tui_header(void) {
     printf(CYAN BOLD "\n");
     printf("  +");  fill('=', W - 4);  printf("+\n");
-    printf("  |  KDE Compiler  |  REPL");
+    printf("  |  KED Compiler  |  REPL");
     int pad = W - 4 - 26;
     fill(' ', pad > 0 ? pad : 1);
     printf("|\n");
@@ -104,11 +104,41 @@ static void print_error_line(const Error* e) {
                    e->lexeme ? e->lexeme : "?");
             break;
         case E_SIN_01:
-            printf("  " RED "[E-SIN-01]" RST " Se esperaba '(' antes de '%s'.\n",
+            printf("  " RED "[E-SIN-01]" RST " Se esperaba '(' al inicio de expresion: '%s'.\n",
                    e->lexeme ? e->lexeme : "?");
             break;
+        case E_SIN_02:
+            printf("  " RED "[E-SIN-02]" RST " Se esperaba ')' al final de expresion.\n");
+            break;
+        case E_SIN_03:
+            printf("  " RED "[E-SIN-03]" RST " Se esperaba una FUNCION despues de '('.\n");
+            break;
+        case E_SIN_04:
+            printf("  " RED "[E-SIN-04]" RST " Orden invalido, FUNCION debe ir antes de ARGUMENTOS.\n");
+            break;
+        case E_SIN_05:
+            printf("  " RED "[E-SIN-05]" RST " Expresion vacia, se esperaba FUNCION.\n");
+            break;
+        case E_SIN_06:
+            printf("  " RED "[E-SIN-06]" RST " No se encontro ningun comando valido.\n");
+            break;
         case E_SEM_01:
-            printf("  " RED "[E-SEM-01]" RST " Variable '%s' usada antes de ser asignada.\n",
+            printf("  " RED "[E-SEM-01]" RST " '%s' requiere al menos un argumento.\n",
+                   e->lexeme ? e->lexeme : "?");
+            break;
+        case E_SEM_02:
+            printf("  " RED "[E-SEM-02]" RST " '%s' no acepta mas de 1 argumento.\n",
+                   e->lexeme ? e->lexeme : "?");
+            break;
+        case E_SEM_03:
+            printf("  " RED "[E-SEM-03]" RST " Argumento debe ser RUTA, no CADENA.\n");
+            break;
+        case E_SEM_04:
+            printf("  " RED "[E-SEM-04]" RST " La ruta '%s' no existe.\n",
+                   e->lexeme ? e->lexeme : "?");
+            break;
+        case E_SEM_05:
+            printf("  " RED "[E-SEM-05]" RST " Variable '%s' usada antes de ser asignada.\n",
                    e->lexeme ? e->lexeme : "?");
             break;
         default:

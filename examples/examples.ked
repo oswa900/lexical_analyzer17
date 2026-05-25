@@ -1,27 +1,38 @@
 x = 10
-y = 20
-z = x + y
+y = -3
+z = x + y * 2
+echo z
 
-a = 2
-b = 3
-c = a * b + 4
-d = c - a * 2
+a = 100
+b = a / 4
+c = b - a * 2
+echo c
 
-if x < y then z = x + 1 else z = y - 1
+if z > 0 && z < 20 then echo z else echo -1
 
-if z < 8 then w = z * 2
+v = -8
+if v < 0 then abs = -v else abs = v
+echo abs
 
-nombre = 'archivo.txt'
-ruta = /home/user/docs
+suma = 0
+for i = 1 to 10 do suma = suma + i
+echo suma
 
-if a < b then resultado = a * 4 else resultado = b + 10
+potencia = 1
+for i = 1 to 8 do potencia = potencia * 2
+echo potencia
 
-total = resultado + z + w
+n = 6
+fact = 1
+for i = 1 to n do fact = fact * i
+echo fact
 
-if total < 100 then final = total + 1 else final = total - 1
+x = 27
+while x > 1 do x = x / 3
+echo x
 
-ls /home/user/docs
-mkdir ./nueva_carpeta
-touch ./nueva_carpeta/archivo.txt
-rm /home/user/docs/viejo.txt
-echo 'hola mundo'
+(mkdir /tmp/kde_examples)
+(touch /tmp/kde_examples/archivo.txt)
+(ls /tmp/kde_examples)
+(rm /tmp/kde_examples/archivo.txt)
+(rm /tmp/kde_examples)

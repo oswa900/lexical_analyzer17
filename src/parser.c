@@ -65,8 +65,15 @@ ASTNode* parse_program(Parser* p) {
     ASTNode* program = make_node(NODE_PROGRAM);
     ASTNode* tail = NULL;
     while (p->current) {
+        int errors_before = p->errors ? p->errors->count : 0;
         ASTNode* stmt = parse_statement(p);
-        if (!stmt) { ast_free(program); return NULL; }
+        if (!stmt) {
+            int errors_after = p->errors ? p->errors->count : 0;
+            if (errors_after == errors_before)
+                error_push(p->errors, E_SIN_06, p->current ? p->current->lexeme : NULL);
+            ast_free(program);
+            return NULL;
+        }
         if (!program->left) { program->left = stmt; tail = stmt; }
         else                { tail->next = stmt;    tail = stmt; }
     }
@@ -91,22 +98,54 @@ static ASTNode* parse_statement(Parser* p) {
     if (current_type(p) == KEYWORD && strcmp(current_lexeme(p), "echo")  == 0)
         return parse_echo(p);
 
-    /* EXPRESION_S → ( FUNCION ARGUMENTOS )
-       Lookahead: '(' seguido de un identificador de funcion valida. */
-    if (current_type(p) == SYMBOLS && strcmp(current_lexeme(p), "(") == 0
-        && p->current->next && p->current->next->type == IDENTIFIER) {
+    /* EXPRESION_S → ( FUNCION ARGUMENTOS ) */
+    if (current_type(p) == SYMBOLS && strcmp(current_lexeme(p), "(") == 0) {
         Token* next = p->current->next;
-        if (is_valid_function(next->lexeme))
-            return parse_shell_cmd(p);
-        /* E-LEX-01: identificador en posicion de FUNCION que no es valido.
-           Solo se activa si el siguiente token parece argumento (RUTA, STRING o ')'),
-           para no confundirlo con expresiones matematicas como (x + 5). */
-        Token* after = next->next;
-        if (after && (after->type == RUTA || after->type == STRING
-            || (after->type == SYMBOLS && strcmp(after->lexeme, ")") == 0))) {
-            error_push(p->errors, E_LEX_01, next->lexeme);
-            /* recuperacion: consumir hasta ')' */
-            advance(p);  /* '(' */
+
+        /* E-SIN-05: parentesis vacios () */
+        if (!next || (next->type == SYMBOLS && strcmp(next->lexeme, ")") == 0)) {
+            error_push(p->errors, E_SIN_05, NULL);
+            advance(p);  /* consume '(' */
+            if (p->current && p->current->type == SYMBOLS
+                && strcmp(p->current->lexeme, ")") == 0)
+                advance(p);  /* consume ')' */
+            return NULL;
+        }
+
+        if (next->type == IDENTIFIER) {
+            if (is_valid_function(next->lexeme))
+                return parse_shell_cmd(p);
+            /* E-LEX-01: identificador invalido en posicion de FUNCION.
+               Solo si el token siguiente parece argumento, no expresion matematica. */
+            Token* after = next->next;
+            if (after && (after->type == RUTA || after->type == STRING
+                || (after->type == SYMBOLS && strcmp(after->lexeme, ")") == 0))) {
+                error_push(p->errors, E_LEX_01, next->lexeme);
+                advance(p);  /* '(' */
+                int depth = 1;
+                while (p->current && depth > 0) {
+                    if (p->current->type == SYMBOLS && strcmp(p->current->lexeme, "(") == 0) depth++;
+                    if (p->current->type == SYMBOLS && strcmp(p->current->lexeme, ")") == 0) depth--;
+                    advance(p);
+                }
+                return NULL;
+            }
+            /* si no, cae en parse_expression para (ident op ...) */
+        }
+
+        /* E-SIN-03 / E-SIN-04: STRING o RUTA antes de funcion */
+        if (next->type == STRING || next->type == RUTA) {
+            int has_function = 0;
+            for (Token* t = next->next;
+                 t && !(t->type == SYMBOLS && strcmp(t->lexeme, ")") == 0);
+                 t = t->next) {
+                if (t->type == IDENTIFIER && is_valid_function(t->lexeme)) {
+                    has_function = 1;
+                    break;
+                }
+            }
+            error_push(p->errors, has_function ? E_SIN_04 : E_SIN_03, next->lexeme);
+            advance(p);  /* consume '(' */
             int depth = 1;
             while (p->current && depth > 0) {
                 if (p->current->type == SYMBOLS && strcmp(p->current->lexeme, "(") == 0) depth++;
@@ -115,6 +154,23 @@ static ASTNode* parse_statement(Parser* p) {
             }
             return NULL;
         }
+
+        /* cualquier otro caso (NUMBER, UNKNOWN): caer en parse_expression */
+    }
+
+    /* E-SIN-01: funcion valida usada sin '(' de apertura */
+    if (current_type(p) == IDENTIFIER && is_valid_function(current_lexeme(p))) {
+        error_push(p->errors, E_SIN_01, current_lexeme(p));
+        advance(p);  /* consume nombre de funcion */
+        while (p->current
+               && p->current->type != KEYWORD
+               && !(p->current->type == SYMBOLS && strcmp(p->current->lexeme, "(") == 0)) {
+            if (p->current->type == SYMBOLS && strcmp(p->current->lexeme, ")") == 0) {
+                advance(p); break;
+            }
+            advance(p);
+        }
+        return NULL;
     }
 
     return parse_expression(p);
@@ -232,8 +288,8 @@ static ASTNode* parse_arg(Parser* p) {
     if (!p->current) return NULL;
     NodeType t;
     switch (current_type(p)) {
-        case STRING:
-        case RUTA:       t = NODE_FACTOR_STRING; break;
+        case STRING:     t = NODE_FACTOR_STRING; break;
+        case RUTA:       t = NODE_FACTOR_RUTA;   break;
         case IDENTIFIER: t = NODE_FACTOR_ID;     break;
         case NUMBER:     t = NODE_FACTOR_NUMBER; break;
         default: return NULL;
@@ -265,7 +321,7 @@ static ASTNode* parse_shell_cmd(Parser* p) {
 
     /* ')' */
     if (!p->current || strcmp(p->current->lexeme, ")") != 0) {
-        error_push(p->errors, E_SIN_01, node->value);
+        error_push(p->errors, E_SIN_02, node->value);
         ast_free(node); return NULL;
     }
     advance(p);
@@ -446,6 +502,7 @@ static const char* node_type_name(NodeType t) {
         case NODE_ECHO:            return "ECHO";
         case NODE_UNARY_NEG:       return "NEG";
         case NODE_SHELL_CMD:       return "SHELL_CMD";
+        case NODE_FACTOR_RUTA:     return "RUTA";
         default:                   return "UNKNOWN";
     }
 }

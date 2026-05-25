@@ -22,7 +22,8 @@ typedef enum NodeType {
     NODE_LOGICAL,
     NODE_ECHO,
     NODE_UNARY_NEG,
-    NODE_SHELL_CMD
+    NODE_SHELL_CMD,
+    NODE_FACTOR_RUTA
 } NodeType;
 
 typedef struct ASTNode {
