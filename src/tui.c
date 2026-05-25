@@ -123,7 +123,22 @@ static void print_error_line(const Error* e) {
             printf("  " RED "[E-SIN-06]" RST " No se encontro ningun comando valido.\n");
             break;
         case E_SEM_01:
-            printf("  " RED "[E-SEM-01]" RST " Variable '%s' usada antes de ser asignada.\n",
+            printf("  " RED "[E-SEM-01]" RST " '%s' requiere al menos un argumento.\n",
+                   e->lexeme ? e->lexeme : "?");
+            break;
+        case E_SEM_02:
+            printf("  " RED "[E-SEM-02]" RST " '%s' no acepta mas de 1 argumento.\n",
+                   e->lexeme ? e->lexeme : "?");
+            break;
+        case E_SEM_03:
+            printf("  " RED "[E-SEM-03]" RST " Argumento debe ser RUTA, no CADENA.\n");
+            break;
+        case E_SEM_04:
+            printf("  " RED "[E-SEM-04]" RST " La ruta '%s' no existe.\n",
+                   e->lexeme ? e->lexeme : "?");
+            break;
+        case E_SEM_05:
+            printf("  " RED "[E-SEM-05]" RST " Variable '%s' usada antes de ser asignada.\n",
                    e->lexeme ? e->lexeme : "?");
             break;
         default:

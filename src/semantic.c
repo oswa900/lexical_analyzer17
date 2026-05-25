@@ -1,8 +1,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "../include/semantic.h"
 #include "../include/dfa.h"      /* is_valid_function() */
+
+/* ---------------------------------------------------------------
+ * Reglas semanticas de cada comando shell
+ * --------------------------------------------------------------- */
+typedef struct {
+    const char* name;
+    int min_args;     /* E_SEM_01 si recibe menos */
+    int max_args;     /* E_SEM_02 si recibe mas; -1 = ilimitado */
+    int expect_ruta;  /* 1=RUTA obligatorio, -1=indiferente */
+    int check_exists; /* 1=la ruta debe existir en el FS (E_SEM_04) */
+} CmdRule;
+
+static const CmdRule CMD_RULES[] = {
+    { "ls",    0, 1,  1,  1 },
+    { "mkdir", 1, 1,  1,  0 },
+    { "touch", 1, 1,  1,  0 },
+    { "edit",  1, 1,  1,  1 },
+    { "rm",    1, 1,  1,  1 },
+    { "help",  0, 0, -1,  0 },
+    { "clear", 0, 0, -1,  0 },
+    { "vim",   1, 1,  1,  0 },
+};
+#define N_CMD_RULES (int)(sizeof(CMD_RULES) / sizeof(CMD_RULES[0]))
 
 /* ---------------------------------------------------------------
  * Prototipos internos (un visitor por tipo de nodo)
@@ -16,6 +40,7 @@ static void analyze_for(SemanticAnalyzer* sa, ASTNode* node);
 static void analyze_condition(SemanticAnalyzer* sa, ASTNode* node);
 static void analyze_binop(SemanticAnalyzer* sa, ASTNode* node);
 static void analyze_factor_id(SemanticAnalyzer* sa, ASTNode* node);
+static void analyze_shell_cmd(SemanticAnalyzer* sa, ASTNode* node);
 
 /* ---------------------------------------------------------------
  * Ciclo de vida
@@ -67,8 +92,7 @@ static void analyze_node(SemanticAnalyzer* sa, ASTNode* node) {
         case NODE_UNARY_NEG:       analyze_node(sa, node->left); break;
         case NODE_SHELL_CMD:
             sym_table_insert(sa->symbols, node->value, SYM_FUNCTION);
-            for (ASTNode* a = node->left; a; a = a->next)
-                if (a->type == NODE_FACTOR_ID) analyze_factor_id(sa, a);
+            analyze_shell_cmd(sa, node);
             break;
         /* NUMBER y STRING son literales — no requieren verificacion */
         default: break;
@@ -136,11 +160,59 @@ static void analyze_binop(SemanticAnalyzer* sa, ASTNode* node) {
     analyze_node(sa, node->right);
 }
 
+/* SHELL_CMD: verifica aridad, tipos de argumentos y existencia de rutas. */
+static void analyze_shell_cmd(SemanticAnalyzer* sa, ASTNode* node) {
+    if (!node || !node->value) return;
+
+    /* buscar regla del comando */
+    const CmdRule* rule = NULL;
+    for (int i = 0; i < N_CMD_RULES; i++) {
+        if (strcmp(CMD_RULES[i].name, node->value) == 0) {
+            rule = &CMD_RULES[i];
+            break;
+        }
+    }
+    if (!rule) return;
+
+    /* contar argumentos */
+    int argc = 0;
+    for (ASTNode* a = node->left; a; a = a->next) argc++;
+
+    /* E_SEM_01: faltan argumentos requeridos */
+    if (argc < rule->min_args) {
+        error_push(sa->errors, E_SEM_01, node->value);
+        return;
+    }
+    /* E_SEM_02: demasiados argumentos */
+    if (rule->max_args >= 0 && argc > rule->max_args) {
+        error_push(sa->errors, E_SEM_02, node->value);
+        return;
+    }
+
+    /* verificar cada argumento */
+    for (ASTNode* a = node->left; a; a = a->next) {
+        if (a->type == NODE_FACTOR_ID) {
+            analyze_factor_id(sa, a);
+            continue;
+        }
+        /* E_SEM_03: se esperaba RUTA pero se recibio CADENA (STRING) */
+        if (rule->expect_ruta == 1 && a->type == NODE_FACTOR_STRING) {
+            error_push(sa->errors, E_SEM_03, a->value);
+            continue;
+        }
+        /* E_SEM_04: la ruta no existe en el sistema de archivos */
+        if (rule->check_exists && a->type == NODE_FACTOR_RUTA && a->value) {
+            if (access(a->value, F_OK) != 0)
+                error_push(sa->errors, E_SEM_04, a->value);
+        }
+    }
+}
+
 /* FACTOR_ID: el caso más importante.
    - Si es un comando conocido → registrar como SYM_FUNCTION (ya fue
      chequeado sintácticamente en parser.c; aquí solo lo catalogamos).
    - Si es un identificador normal → verificar que haya sido declarado
-     antes; si no, E_SEM_01. */
+     antes; si no, E_SEM_05. */
 static void analyze_factor_id(SemanticAnalyzer* sa, ASTNode* node) {
     if (!node->value) return;
 
@@ -154,6 +226,6 @@ static void analyze_factor_id(SemanticAnalyzer* sa, ASTNode* node) {
     /* Variable: debe haber sido asignada antes */
     SymbolEntry* entry = sym_table_lookup(sa->symbols, node->value);
     if (!entry || !entry->defined) {
-        error_push(sa->errors, E_SEM_01, node->value);
+        error_push(sa->errors, E_SEM_05, node->value);
     }
 }

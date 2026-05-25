@@ -69,7 +69,22 @@ static void print_one(const Error* e) {
 		printf("Error sintactico [E-SIN-06]: No se encontro ningun comando valido.\n");
 		break;
 	case E_SEM_01:
-		printf("Error semantico [E-SEM-01]: Variable '%s' usada sin declarar.\n",
+		printf("Error semantico [E-SEM-01]: '%s' requiere al menos un argumento.\n",
+		       e->lexeme ? e->lexeme : "?");
+		break;
+	case E_SEM_02:
+		printf("Error semantico [E-SEM-02]: '%s' no acepta mas de 1 argumento.\n",
+		       e->lexeme ? e->lexeme : "?");
+		break;
+	case E_SEM_03:
+		printf("Error semantico [E-SEM-03]: Argumento debe ser RUTA, no CADENA.\n");
+		break;
+	case E_SEM_04:
+		printf("Error semantico [E-SEM-04]: La ruta '%s' no existe.\n",
+		       e->lexeme ? e->lexeme : "?");
+		break;
+	case E_SEM_05:
+		printf("Error semantico [E-SEM-05]: Variable '%s' usada sin declarar.\n",
 		       e->lexeme ? e->lexeme : "?");
 		break;
 

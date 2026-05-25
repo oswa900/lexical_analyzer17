@@ -288,8 +288,8 @@ static ASTNode* parse_arg(Parser* p) {
     if (!p->current) return NULL;
     NodeType t;
     switch (current_type(p)) {
-        case STRING:
-        case RUTA:       t = NODE_FACTOR_STRING; break;
+        case STRING:     t = NODE_FACTOR_STRING; break;
+        case RUTA:       t = NODE_FACTOR_RUTA;   break;
         case IDENTIFIER: t = NODE_FACTOR_ID;     break;
         case NUMBER:     t = NODE_FACTOR_NUMBER; break;
         default: return NULL;
@@ -502,6 +502,7 @@ static const char* node_type_name(NodeType t) {
         case NODE_ECHO:            return "ECHO";
         case NODE_UNARY_NEG:       return "NEG";
         case NODE_SHELL_CMD:       return "SHELL_CMD";
+        case NODE_FACTOR_RUTA:     return "RUTA";
         default:                   return "UNKNOWN";
     }
 }
