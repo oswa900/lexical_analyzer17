@@ -4,4 +4,4 @@ FLAGS = -std=c99 -pedantic
 MAIN = main.c
 
 run:
-	$(CC) $(MAIN) $(SRC) -o kde
+	$(CC) $(MAIN) $(SRC) -o ked

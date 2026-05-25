@@ -104,11 +104,11 @@ fact = 1
 for i = 1 to n do fact = fact * i
 echo fact`,
 
-    producciones: `(mkdir /tmp/kde_prueba)
-(touch /tmp/kde_prueba/hola.txt)
-(ls /tmp/kde_prueba)
-(rm /tmp/kde_prueba/hola.txt)
-(rm /tmp/kde_prueba)`,
+    producciones: `(mkdir /tmp/ked_prueba)
+(touch /tmp/ked_prueba/hola.txt)
+(ls /tmp/ked_prueba)
+(rm /tmp/ked_prueba/hola.txt)
+(rm /tmp/ked_prueba)`,
 
     errores_lexicos: `a = "cadena invalida con comillas dobles"
 b = 10@`,
@@ -1630,7 +1630,7 @@ function runCompiler() {
 
         // Terminal text builder
         let terminalLines = `
-            <div class="terminal-line"><span class="prompt">$</span> ./kde compile_input.ked</div>
+            <div class="terminal-line"><span class="prompt">$</span> ./ked compile_input.ked</div>
             <div class="terminal-line system-out">Iniciando máquina virtual KED...</div>
         `;
         globalEnv.stdout.forEach(line => {
@@ -1649,7 +1649,7 @@ function runCompiler() {
         pipeline.vm.className = 'status-node';
         renderSymbolTable(globalEnv);
         consoleContainer.innerHTML = `
-            <div class="terminal-line"><span class="prompt">$</span> ./kde compile_input.ked</div>
+            <div class="terminal-line"><span class="prompt">$</span> ./ked compile_input.ked</div>
             <div class="terminal-line system-out" style="color: var(--error);">Fallo en la compilación. Revisa la barra inferior para ver los detalles.</div>
         `;
     }
@@ -1723,7 +1723,7 @@ function runCompilerOnC() {
             // 3. Render Virtual Terminal / Console Output
             const consoleContainer = document.getElementById('console-render');
             let terminalLines = `
-            <div class="terminal-line"><span class="prompt">$</span> wsl ./kde compile_input.ked</div>
+            <div class="terminal-line"><span class="prompt">$</span> wsl ./ked compile_input.ked</div>
             <div class="terminal-line system-out" style="color: var(--accent);">Iniciando compilador de C nativo...</div>
         `;
 

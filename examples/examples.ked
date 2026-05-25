@@ -31,8 +31,8 @@ x = 27
 while x > 1 do x = x / 3
 echo x
 
-(mkdir /tmp/kde_examples)
-(touch /tmp/kde_examples/archivo.txt)
-(ls /tmp/kde_examples)
-(rm /tmp/kde_examples/archivo.txt)
-(rm /tmp/kde_examples)
+(mkdir /tmp/ked_examples)
+(touch /tmp/ked_examples/archivo.txt)
+(ls /tmp/ked_examples)
+(rm /tmp/ked_examples/archivo.txt)
+(rm /tmp/ked_examples)
