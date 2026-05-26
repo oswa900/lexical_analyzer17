@@ -183,15 +183,16 @@ List* tokenize(const char* input, ErrorStack* errors) {
             continue;
         }
 
-        /* E-LEX-02: double-quoted string */
+        /* E-LEX-02 / E-LEX-05: double-quoted string */
         if (*str == '"') {
             flush_buffer(l, buffer, &i, errors);
             buffer[i++] = *str++;
             while (*str && *str != '"' && *str != '\n' && *str != '\r')
                 buffer[i++] = *str++;
-            if (*str == '"') buffer[i++] = *str++;
+            int closed = (*str == '"');
+            if (closed) buffer[i++] = *str++;
             buffer[i] = '\0';
-            error_push(errors, E_LEX_02, buffer);
+            error_push(errors, closed ? E_LEX_05 : E_LEX_02, buffer);
             Token* t = get_next_token("?");
             if (t) { free(t->lexeme); t->lexeme = strdup(buffer); push_token(l, t); }
             memset(buffer, 0, i + 1);

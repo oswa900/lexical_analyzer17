@@ -15,18 +15,18 @@
 
 #define W 50
 
-static void fill(char c, int n) {
+static void fill(char c, int n) { //para darle formato
     for (int i = 0; i < n; i++) putchar(c);
 }
 
-static void section_open(const char* title, const char* color) {
+static void section_open(const char* title, const char* color) { //encabezado
     int used = 3 + (int)strlen(title) + 1;
     printf("\n%s── %s ", color, title);
     fill('-', W - used > 0 ? W - used : 2);
     printf(RST "\n");
 }
 
-static void section_close(void) {
+static void section_close(void) { //separador entre secciones 
     printf(GRAY);
     fill('-', W);
     printf(RST "\n\n");
@@ -93,6 +93,10 @@ static void print_error_line(const Error* e) {
             break;
         case E_LEX_04:
             printf("  " RED "[E-LEX-04]" RST " Token '%s' no reconocido.\n",
+                   e->lexeme ? e->lexeme : "?");
+            break;
+        case E_LEX_05:
+            printf("  " RED "[E-LEX-05]" RST " Comillas dobles no soportadas: %s. Use comillas simples.\n",
                    e->lexeme ? e->lexeme : "?");
             break;
         case E_SIN_01:
@@ -175,7 +179,7 @@ void tui_show_output(const Env* env, int hit_limit) {
     section_close();
 }
 
-void tui_show_code(const TACList* tac) {
+void tui_show_code(const TACList* tac) { //imprime el codigo intermedio
     section_open("Codigo Intermedio (TAC)", "\033[35m");
     if (tac)
         tac_print(tac);
@@ -184,7 +188,7 @@ void tui_show_code(const TACList* tac) {
     section_close();
 }
 
-void tui_show_errors(const ErrorStack* es) {
+void tui_show_errors(const ErrorStack* es) { //imprime los errores encontrados
     if (error_stack_empty(es)) {
         printf(GREEN "  Sin errores\n" RST "\n");
         return;

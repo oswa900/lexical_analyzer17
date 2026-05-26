@@ -3,7 +3,7 @@
 #include <string.h>
 #include "../include/error.h"
 
-ErrorStack* error_stack_init(void) {
+ErrorStack* error_stack_init(void) { //reserva de memoria para la pila de errores
 	ErrorStack* es = malloc(sizeof(ErrorStack));
 	if (!es) return NULL;
 	es->top   = NULL;
@@ -35,7 +35,7 @@ static void print_one(const Error* e) {
 	switch (e->code) {
         case E_LEX_01:
 		printf("Error lexico [E-LEX-01]: '%s' no es una funcion valida.\n",
-		       e->lexeme ? e->lexeme : "?");
+		       e->lexeme ? e->lexeme : "?"); //valor por defecto si lexeme es NULL
 		break;
         case E_LEX_02:
 		printf("Error lexico [E-LEX-02]: Cadena sin cerrar: %s\n",
@@ -47,6 +47,10 @@ static void print_one(const Error* e) {
 		break;
         case E_LEX_04:
 		printf("Error lexico [E-LEX-04]: Token '%s' no reconocido.\n",
+		       e->lexeme ? e->lexeme : "?");
+		break;
+        case E_LEX_05:
+		printf("Error lexico [E-LEX-05]: Comillas dobles no soportadas: %s. Use comillas simples.\n",
 		       e->lexeme ? e->lexeme : "?");
 		break;
         case E_SIN_01:
@@ -126,5 +130,5 @@ void error_stack_free(ErrorStack* es) {
 }
 
 int error_stack_empty(const ErrorStack* es) {
-	return !es || !es->top;
+	return !es || !es->top; //devuelve 1 si es NULL o si no tiene errores, 0 si tiene errores
 }

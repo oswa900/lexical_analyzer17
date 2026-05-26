@@ -6,6 +6,7 @@ typedef enum ErrorCode {
     E_LEX_02 = 102,
     E_LEX_03 = 103,
     E_LEX_04 = 104,
+    E_LEX_05 = 105,   /* Comillas dobles no soportadas              */
     E_SIN_01 = 201,
     E_SIN_02 = 202,
     E_SIN_03 = 203,
